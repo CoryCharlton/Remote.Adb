@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:emu="using:Remote.Adb.Desktop.Emulators"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="Remote.Adb.Desktop.Emulators.EmulatorView"
+             x:DataType="emu:EmulatorViewModel">
+
+    <!-- Thin shell for the in-page master-detail. Both children are placed DIRECTLY in the Panel (not via a
+         ContentControl): a Panel force-fills each child to its own bounds, so the detail's ScrollViewer is
+         bounded to the viewport. Hosting the detail in a ContentControl instead arranges it by alignment, not
+         force-fill, so the DockPanel/ScrollViewer overflowed the window and couldn't scroll to the bottom.
+         The detail binds its DataContext to SelectedDetail; its visibility is driven off the page view model
+         reached through the named shell (its own DataContext is the detail, not the page). -->
+    <Panel x:Name="Shell">
+        <emu:EmulatorListView IsVisible="{Binding SelectedDetail, Converter={x:Static ObjectConverters.IsNull}}"/>
+        <emu:EmulatorDetailsView DataContext="{Binding SelectedDetail}"
+                                 IsVisible="{Binding #Shell.((emu:EmulatorViewModel)DataContext).SelectedDetail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+    </Panel>
+
+</UserControl>

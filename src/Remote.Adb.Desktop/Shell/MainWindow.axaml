@@ -1,0 +1,100 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Remote.Adb.Desktop.Shell"
+        xmlns:conv="using:Remote.Adb.Desktop.Common.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
+        x:Class="Remote.Adb.Desktop.Shell.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/logo.ico"
+        Title="Remote ADB"
+        Width="1024" Height="768"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="{DynamicResource BodyFontFamily}"
+        Background="{DynamicResource Surface}">
+
+    <Window.Resources>
+        <conv:ResourceKeyToGeometryConverter x:Key="ResourceKeyToGeometry"/>
+    </Window.Resources>
+
+    <Window.Styles>
+        <!-- Footer chevron points the way the drawer will move: flips when collapsed to the rail. -->
+        <Style Selector="PathIcon.collapsed">
+            <Setter Property="RenderTransform" Value="rotate(180deg)"/>
+        </Style>
+    </Window.Styles>
+
+    <DrawerPage DrawerBehavior="Locked" IsOpen="True" DrawerLength="{Binding DrawerLength}">
+
+        <!-- Brand header (hidden in the compact rail). -->
+        <DrawerPage.DrawerHeader>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12" Margin="24,20,24,12">
+                <Image Source="/Assets/logo.png" Width="32" Height="32"/>
+                <TextBlock Classes="TitleLarge" Text="Remote ADB" IsVisible="{Binding !IsRail}"/>
+            </StackPanel>
+        </DrawerPage.DrawerHeader>
+
+        <!-- Destinations: the labeled drawer and the icon rail are both projected from the
+             VM's Destinations collection and share one SelectedDestination, so their order
+             can't drift and a new destination is a single VM edit. -->
+        <DrawerPage.Drawer>
+            <Panel>
+                <ListBox Classes="NavigationDrawer" ItemsSource="{Binding Destinations}"
+                         SelectedItem="{Binding SelectedDestination}" IsVisible="{Binding !IsRail}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:NavigationDestination">
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <PathIcon Data="{Binding IconKey, Converter={StaticResource ResourceKeyToGeometry}}"
+                                          Width="24" Height="24"/>
+                                <TextBlock Classes="LabelLarge" Text="{Binding Label}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <ListBox Classes="NavigationRail" VerticalAlignment="Top" ItemsSource="{Binding Destinations}"
+                         SelectedItem="{Binding SelectedDestination}" IsVisible="{Binding IsRail}">
+                    <ListBox.Styles>
+                        <!-- Icon-only rail: hide the theme's RailLabel (no empty gap) and surface
+                             the destination name as a tooltip on hover instead. -->
+                        <Style Selector="ListBoxItem /template/ TextBlock#RailLabel">
+                            <Setter Property="IsVisible" Value="False"/>
+                        </Style>
+                        <Style Selector="ListBoxItem" x:DataType="vm:NavigationDestination">
+                            <Setter Property="ToolTip.Tip" Value="{Binding Label}"/>
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:NavigationDestination">
+                            <PathIcon Data="{Binding IconKey, Converter={StaticResource ResourceKeyToGeometry}}"
+                                      Width="24" Height="24"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Panel>
+        </DrawerPage.Drawer>
+
+        <!-- Pinned footer: collapse/expand the navigation. -->
+        <DrawerPage.DrawerFooter>
+            <Border Padding="12,16" BorderBrush="{DynamicResource OutlineVariant}" BorderThickness="0,1,0,0">
+                <Button Classes="Icon" HorizontalAlignment="Center" Command="{Binding ToggleRailCommand}"
+                        ToolTip.Tip="Collapse / expand navigation">
+                    <PathIcon Data="{StaticResource IconCaretLeft}" Width="16" Height="16"
+                              Classes.collapsed="{Binding IsRail}" RenderTransformOrigin="50%,50%"/>
+                </Button>
+            </Border>
+        </DrawerPage.DrawerFooter>
+
+        <!-- Routed content. DrawerPage now bakes the pane↔content divider into its own
+             template, so there's no consumer-side border here.
+             DrawerPage is a Page: its Content slot does NOT inherit the window's
+             DataContext (the drawer/header/footer chrome slots do), so route it in
+             explicitly via the Window ancestor — otherwise CurrentScreen never
+             resolves and the content area renders empty. -->
+        <ContentControl Content="{Binding CurrentScreen}"
+                        DataContext="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext)}"/>
+
+    </DrawerPage>
+
+</Window>

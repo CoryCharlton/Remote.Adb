@@ -1,0 +1,36 @@
+<Solution>
+  <Folder Name="/docs/">
+    <File Path="../CLAUDE.md" />
+    <File Path="../LICENSE.md" />
+    <File Path="../README.md" />
+    <File Path="../docs/ROADMAP.md" />
+  </Folder>
+  <Folder Name="/docs/tasks/">
+    <File Path="../docs/tasks/0001-restructure.md" />
+    <File Path="../docs/tasks/0002-emulator-management.md" />
+    <File Path="../docs/tasks/0003-emulator-friendly-names.md" />
+    <File Path="../docs/tasks/0004-design-system-theme.md" />
+    <File Path="../docs/tasks/0005-feature-first-restructure.md" />
+    <File Path="../docs/tasks/0006-emulator-view-details.md" />
+    <File Path="../docs/tasks/0007-emulator-edit-details.md" />
+    <File Path="../docs/tasks/0008-emulator-create.md" />
+    <File Path="../docs/tasks/0009-sdk-manager.md" />
+    <File Path="../docs/tasks/0010-settings-sdk-overrides.md" />
+    <File Path="../docs/tasks/0011-settings-persistence.md" />
+  </Folder>
+  <Folder Name="/eng/">
+    <File Path="../.gitignore" />
+    <File Path="../adb-tunnel.bat" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="../global.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="Remote.Adb.Console/Remote.Adb.Console.csproj" />
+    <Project Path="Remote.Adb.Core/Remote.Adb.Core.csproj" />
+    <Project Path="Remote.Adb.Desktop/Remote.Adb.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="Remote.Adb.Core.UnitTests/Remote.Adb.Core.UnitTests.csproj" />
+  </Folder>
+</Solution>

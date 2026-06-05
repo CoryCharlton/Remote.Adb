@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:theme="using:CCSWE.Avalonia.Material"
+             x:Class="Remote.Adb.Desktop.Common.BusyOverlay">
+
+    <!-- A full-bleed scrim that dims and blocks input while a centered spinner runs. Reusable across
+         screens; the consumer toggles visibility (e.g. IsVisible="{Binding IsBusy}"). -->
+    <Border Background="#66000000">
+        <theme:CircularProgressIndicator IsIndeterminate="True"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+
+</UserControl>

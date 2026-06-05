@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:emu="using:Remote.Adb.Desktop.Emulators"
+             xmlns:conv="using:Remote.Adb.Desktop.Common.Converters"
+             xmlns:theme="using:CCSWE.Avalonia.Material"
+             x:Class="Remote.Adb.Desktop.Emulators.EmulatorCardView"
+             x:DataType="emu:EmulatorDeviceViewModel">
+
+    <UserControl.Resources>
+        <conv:DeviceTagToGeometryConverter x:Key="DeviceTagToGeometry"/>
+    </UserControl.Resources>
+
+    <!-- One emulator row. The row's view model is this control's DataContext; the page-level
+         commands (start/stop/view) live on the EmulatorViewModel, reached via the ItemsControl
+         ancestor, with this row passed as the parameter. -->
+    <theme:Card Classes="Elevated"
+                Command="{Binding $parent[ItemsControl].((emu:EmulatorViewModel)DataContext).ViewDetailsCommand}"
+                CommandParameter="{Binding}">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <PathIcon Grid.Column="0" Width="24" Height="24" Margin="0,0,12,0"
+                      VerticalAlignment="Center" Foreground="{DynamicResource OnSurfaceVariant}"
+                      Data="{Binding Tag, Converter={StaticResource DeviceTagToGeometry}}"/>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="{Binding DisplayName}" Classes="TitleMedium"
+                           Foreground="{DynamicResource OnSurface}"/>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding Name}" Classes="BodySmall"
+                               Foreground="{DynamicResource OnSurfaceVariant}"/>
+                    <TextBlock Text="{Binding Tag}" Classes="BodySmall"
+                               Foreground="{DynamicResource OnSurfaceVariant}"
+                               IsVisible="{Binding Tag, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding Serial}" Classes="BodySmall"
+                               Foreground="{DynamicResource OnSurfaceVariant}"
+                               IsVisible="{Binding Serial, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+
+                <!-- Start / starting / stop share one slot: the icon is both action and state. -->
+                <Panel VerticalAlignment="Center">
+                    <Button Classes="Icon" IsVisible="{Binding ShowStart}" ToolTip.Tip="Start"
+                            Command="{Binding $parent[ItemsControl].((emu:EmulatorViewModel)DataContext).StartCommand}"
+                            CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IconPlay}" Width="20" Height="20"
+                                  Foreground="{DynamicResource Primary}"/>
+                    </Button>
+                    <ProgressBar Width="32" Height="4" IsIndeterminate="True"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 IsVisible="{Binding IsStarting}" ToolTip.Tip="Starting…"/>
+                    <Button Classes="Icon" IsVisible="{Binding ShowStop}" ToolTip.Tip="Stop"
+                            Command="{Binding $parent[ItemsControl].((emu:EmulatorViewModel)DataContext).StopCommand}"
+                            CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IconStop}" Width="20" Height="20"
+                                  Foreground="{DynamicResource Error}"/>
+                    </Button>
+                </Panel>
+
+                <!-- Overflow menu. Flyout items can't reach the ItemsControl ancestor, so Delete binds to the
+                     DeleteCommand exposed on the row view model (which the flyout inherits as its DataContext). -->
+                <Button Classes="Icon" ToolTip.Tip="More actions">
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="Delete" Foreground="{DynamicResource Error}"
+                                      Command="{Binding DeleteCommand}" CommandParameter="{Binding}"
+                                      IsEnabled="{Binding !IsRunning}">
+                                <MenuItem.Icon>
+                                    <PathIcon Data="{StaticResource IconTrash}" Width="16" Height="16"
+                                              Foreground="{DynamicResource Error}"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                    <PathIcon Data="{StaticResource IconDotsThreeVertical}" Width="20" Height="20"
+                              Foreground="{DynamicResource OnSurfaceVariant}"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </theme:Card>
+
+</UserControl>

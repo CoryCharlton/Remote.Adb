@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Remote.Adb.Desktop.Settings"
+             xmlns:theme="using:CCSWE.Avalonia.Material"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="Remote.Adb.Desktop.Settings.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <StackPanel Margin="{DynamicResource Spacing6Thickness}" Spacing="16">
+        <TextBlock Classes="HeadlineSmall" Text="Settings"
+                   Foreground="{DynamicResource OnSurfaceStrong}"/>
+
+        <theme:Card Classes="Elevated">
+            <StackPanel Spacing="4">
+                <TextBlock Classes="TitleMedium" Text="Appearance"
+                           Foreground="{DynamicResource OnSurface}"/>
+                <TextBlock Classes="BodySmall" Text="Switch the color theme and layout density."
+                           Foreground="{DynamicResource OnSurfaceVariant}"/>
+                <ToggleSwitch Content="Light mode" Margin="0,8,0,0"
+                              IsChecked="{Binding IsLightTheme}"/>
+                <ToggleSwitch Content="Compact density"
+                              IsChecked="{Binding IsCompactDensity}"/>
+            </StackPanel>
+        </theme:Card>
+    </StackPanel>
+
+</UserControl>

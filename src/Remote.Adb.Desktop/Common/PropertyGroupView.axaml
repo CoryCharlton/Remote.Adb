@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:common="using:Remote.Adb.Desktop.Common"
+             xmlns:theme="using:CCSWE.Avalonia.Material"
+             x:Class="Remote.Adb.Desktop.Common.PropertyGroupView"
+             x:DataType="common:DetailGroup"
+             IsVisible="{Binding IsVisible}">
+
+    <!-- One section: a Material Divider carrying the group name as its header, over the label → value rows.
+         No card or expander here — the host (details pane / create wizard) wraps the whole stack of sections
+         in a single Elevated card, so the sections read as divider-separated groups (Android-Studio style). -->
+    <StackPanel Spacing="8">
+        <theme:Divider Header="{Binding Header}"/>
+        <ItemsControl ItemsSource="{Binding Rows}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="common:AvdField">
+                    <common:PropertyRow/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+
+</UserControl>

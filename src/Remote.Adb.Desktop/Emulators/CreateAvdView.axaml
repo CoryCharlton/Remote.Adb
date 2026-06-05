@@ -1,0 +1,255 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:emu="using:Remote.Adb.Desktop.Emulators"
+             xmlns:core="using:Remote.Adb.Core.Emulators"
+             xmlns:common="using:Remote.Adb.Desktop.Common"
+             x:Class="Remote.Adb.Desktop.Emulators.CreateAvdView"
+             x:DataType="emu:CreateAvdViewModel">
+
+    <Panel>
+        <Grid RowDefinitions="*,Auto">
+
+            <Panel Grid.Row="0">
+
+                <!-- ===== Step 0: pick a device (form factor + device table) ===== -->
+                <Grid IsVisible="{Binding IsFirstStep}" ColumnDefinitions="160,*" Margin="16">
+
+                    <StackPanel Grid.Column="0" Spacing="8" Margin="0,0,12,0">
+                        <TextBlock Classes="TitleSmall" Foreground="{DynamicResource Primary}" Text="Form Factor"/>
+                        <!-- A single-select list rendered as radio buttons: the ListBoxItem owns selection,
+                             the (non-hit-testable) RadioButton just reflects it. -->
+                        <ListBox ItemsSource="{Binding FormFactors}" SelectedItem="{Binding SelectedFormFactor}"
+                                 Background="Transparent" BorderThickness="0" Padding="0">
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="MinHeight" Value="0"/>
+                                </Style>
+                                <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="emu:FormFactorOption">
+                                    <RadioButton Content="{Binding Label}" IsHitTestVisible="False" Margin="2"
+                                                 IsChecked="{Binding $parent[ListBoxItem].IsSelected, Mode=OneWay}"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <CheckBox IsChecked="{Binding ShowObsolete}" Margin="0,8,0,0">
+                            <TextBlock Classes="BodyMedium" Text="Show obsolete device profiles" TextWrapping="Wrap"/>
+                        </CheckBox>
+                    </StackPanel>
+
+                    <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*">
+                        <TextBox Grid.Row="0" Text="{Binding DeviceSearch}" Margin="0,0,0,8"
+                                 PlaceholderText="Search for a device by name"/>
+
+                        <!-- Header insets match the list rows: left = border(1) + item padding(16); the right
+                             gutter is bound to the list's actual scrollbar in code-behind so columns line up
+                             whether or not the list is scrolling. -->
+                        <Grid x:Name="DeviceHeader" Grid.Row="1" ColumnDefinitions="*,44,56,64,64,84" Margin="17,0,17,6">
+                            <TextBlock Grid.Column="0" Classes="LabelLarge" Foreground="{DynamicResource OnSurfaceVariant}" Text="Name"/>
+                            <TextBlock Grid.Column="1" Classes="LabelLarge" Foreground="{DynamicResource OnSurfaceVariant}" Text="Play" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Classes="LabelLarge" Foreground="{DynamicResource OnSurfaceVariant}" Text="API" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Classes="LabelLarge" Foreground="{DynamicResource OnSurfaceVariant}" Text="Width" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Classes="LabelLarge" Foreground="{DynamicResource OnSurfaceVariant}" Text="Height" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="5" Classes="LabelLarge" Foreground="{DynamicResource OnSurfaceVariant}" Text="Density" HorizontalAlignment="Center"/>
+                        </Grid>
+
+                        <ListBox x:Name="DeviceList" Grid.Row="2" ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
+                                 BorderBrush="{DynamicResource OutlineVariant}" BorderThickness="1" CornerRadius="8">
+                            <ListBox.Styles>
+                                <Style Selector="ListBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                </Style>
+                            </ListBox.Styles>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="core:DeviceProfile">
+                                    <Grid ColumnDefinitions="*,44,56,64,64,84">
+                                        <TextBlock Grid.Column="0" Classes="BodyMedium" Text="{Binding Name}"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <PathIcon Grid.Column="1" Data="{StaticResource IconGooglePlayLogo}" Width="13" Height="13"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Primary}"
+                                                  ToolTip.Tip="Supports Google Play" IsVisible="{Binding PlayStore}"/>
+                                        <TextBlock Grid.Column="2" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding SupportedApi}"/>
+                                        <TextBlock Grid.Column="3" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding ScreenWidth}"/>
+                                        <TextBlock Grid.Column="4" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding ScreenHeight}"/>
+                                        <TextBlock Grid.Column="5" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Run Text="{Binding Density}"/><Run Text=" dpi"/>
+                                        </TextBlock>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Grid>
+
+                <!-- ===== Step 1: configure (Device / Additional settings tabs) + summary ===== -->
+                <Grid IsVisible="{Binding IsLastStep}" ColumnDefinitions="*,280">
+
+                    <TabControl Grid.Column="0" SelectedIndex="{Binding ConfigureTab}">
+
+                        <TabItem Header="Device">
+                            <ScrollViewer>
+                                <StackPanel Spacing="16" Margin="16,16,16,8">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Classes="LabelLarge" Text="Name"/>
+                                        <TextBox Text="{Binding Name}" PlaceholderText="My_Avd"/>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Classes="LabelLarge" Text="Display name (optional)"/>
+                                        <TextBox Text="{Binding DisplayName}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Classes="LabelLarge" Text="Select system image"/>
+                                        <Grid ColumnDefinitions="*,*">
+                                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" Margin="0,0,4,0"
+                                                      ItemsSource="{Binding ApiFilters}" SelectedItem="{Binding SelectedApiFilter}"/>
+                                            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" Margin="4,0,0,0"
+                                                      ItemsSource="{Binding ServicesFilters}" SelectedItem="{Binding SelectedServicesFilter}"/>
+                                        </Grid>
+                                        <ListBox ItemsSource="{Binding Images}" SelectedItem="{Binding SelectedImage}"
+                                                 MaxHeight="260" BorderBrush="{DynamicResource OutlineVariant}" BorderThickness="1"
+                                                 CornerRadius="8">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="core:SystemImagePackage">
+                                                    <StackPanel Spacing="2" Margin="0,4">
+                                                        <TextBlock Classes="BodyMedium">
+                                                            <Run Text="{Binding VersionName}"/><Run Text="  ·  "/><Run Text="{Binding Services}"/>
+                                                        </TextBlock>
+                                                        <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}">
+                                                            <Run Text="API "/><Run Text="{Binding ApiLevel}"/><Run Text="  ·  "/><Run Text="{Binding Abi}"/>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                                   IsVisible="{Binding NoSystemImages}"
+                                                   Text="No installed system images for this device. Install one with the SDK Manager."/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <TabItem Header="Additional settings">
+                            <ScrollViewer>
+                                <StackPanel Spacing="12" Margin="16,16,16,8">
+                                    <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                               Text="Leave a setting blank to use the device's default."/>
+                                    <ItemsControl ItemsSource="{Binding Groups}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="16"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="common:DetailGroup">
+                                                <common:PropertyGroupView/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+                    </TabControl>
+
+                    <!-- Live summary of the configured device. Full-bleed scroll; inset on the content margin. -->
+                    <Border Grid.Column="1" BorderBrush="{DynamicResource OutlineVariant}" BorderThickness="1,0,0,0">
+                        <ScrollViewer>
+                            <StackPanel Spacing="20" Margin="16,20">
+                            <TextBlock Classes="TitleMedium" Foreground="{DynamicResource OnSurfaceStrong}"
+                                       Text="{Binding SelectedDevice.Name}" TextWrapping="Wrap"/>
+
+                            <!-- Device-frame illustration: width on top, height rotated on the left, diagonal centered. -->
+                            <Grid HorizontalAlignment="Center" ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto"
+                                  IsVisible="{Binding SelectedDevice.ScreenWidth, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,0,2"
+                                           Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}">
+                                    <Run Text="{Binding SelectedDevice.ScreenWidth}"/><Run Text=" px"/>
+                                </TextBlock>
+
+                                <LayoutTransformControl Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,4,0">
+                                    <LayoutTransformControl.LayoutTransform>
+                                        <RotateTransform Angle="-90"/>
+                                    </LayoutTransformControl.LayoutTransform>
+                                    <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}">
+                                        <Run Text="{Binding SelectedDevice.ScreenHeight}"/><Run Text=" px"/>
+                                    </TextBlock>
+                                </LayoutTransformControl>
+
+                                <Border Grid.Row="1" Grid.Column="1" Width="{Binding FrameWidth}" Height="{Binding FrameHeight}"
+                                        CornerRadius="12" BorderThickness="2" BorderBrush="{DynamicResource OutlineVariant}"
+                                        Background="{DynamicResource SurfaceContainerHighest}">
+                                    <TextBlock Text="{Binding SelectedDevice.DiagonalLabel}" Classes="BodySmall"
+                                               Foreground="{DynamicResource OnSurfaceVariant}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </Grid>
+
+                            <StackPanel Spacing="2">
+                                <TextBlock Classes="TitleSmall" Foreground="{DynamicResource Primary}" Text="Device"/>
+                                <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                           Text="{Binding SelectedDevice.Oem}"/>
+                                <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}">
+                                    <Run Text="Supported API "/><Run Text="{Binding SelectedDevice.SupportedApi}"/>
+                                </TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Spacing="2">
+                                <TextBlock Classes="TitleSmall" Foreground="{DynamicResource Primary}" Text="System image"/>
+                                <TextBlock Classes="BodyMedium" Text="{Binding SelectedImage.VersionName}"/>
+                                <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                           Text="{Binding SelectedImage.Services}"/>
+                                <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}">
+                                    <Run Text="API "/><Run Text="{Binding SelectedImage.ApiLevel}"/><Run Text="  ·  "/><Run Text="{Binding SelectedImage.Abi}"/>
+                                </TextBlock>
+                            </StackPanel>
+
+                            <StackPanel Spacing="2">
+                                <TextBlock Classes="TitleSmall" Foreground="{DynamicResource Primary}" Text="Screen"/>
+                                <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                                           Text="{Binding SelectedDevice.Resolution}"/>
+                                <TextBlock Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}">
+                                    <Run Text="{Binding SelectedDevice.Density}"/><Run Text=" dpi"/>
+                                </TextBlock>
+                            </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Panel>
+
+            <!-- Footer: status + navigation. -->
+            <Border Grid.Row="1" BorderBrush="{DynamicResource OutlineVariant}" BorderThickness="0,1,0,0"
+                    Padding="16,12">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" TextWrapping="Wrap"
+                               Classes="BodySmall" Foreground="{DynamicResource Error}"
+                               IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                               Text="{Binding StatusMessage}"/>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Content="Cancel" Command="{Binding CancelCommand}"/>
+                        <Button Content="Previous" Command="{Binding PreviousCommand}"
+                                IsVisible="{Binding IsLastStep}"/>
+                        <Button Content="Next" Command="{Binding NextCommand}"
+                                IsVisible="{Binding IsFirstStep}"/>
+                        <Button Content="Finish" Classes="Filled" Command="{Binding FinishCommand}"
+                                IsVisible="{Binding IsLastStep}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <common:BusyOverlay IsVisible="{Binding IsBusy}"/>
+    </Panel>
+
+</UserControl>

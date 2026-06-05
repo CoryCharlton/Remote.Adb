@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:common="using:Remote.Adb.Desktop.Common"
+        x:Class="Remote.Adb.Desktop.Common.ConfirmDialogWindow"
+        x:DataType="common:ConfirmDialogViewModel"
+        Title="{Binding Title}"
+        Width="420" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="{DynamicResource BodyFontFamily}"
+        Background="{DynamicResource Surface}">
+
+    <StackPanel Margin="24" Spacing="20">
+        <TextBlock Classes="TitleMedium" Foreground="{DynamicResource OnSurfaceStrong}"
+                   Text="{Binding Title}" TextWrapping="Wrap"/>
+        <TextBlock Classes="BodyMedium" Foreground="{DynamicResource OnSurfaceVariant}"
+                   Text="{Binding Message}" TextWrapping="Wrap"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button Content="Cancel" Command="{Binding CancelCommand}"/>
+            <Button Classes="Filled" Content="{Binding ConfirmLabel}" Command="{Binding ConfirmCommand}"/>
+        </StackPanel>
+    </StackPanel>
+
+</Window>
