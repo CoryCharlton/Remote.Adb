@@ -1,37 +1,13 @@
-using System;
-using System.Diagnostics.CodeAnalysis;
-using Avalonia.Controls;
-using Avalonia.Controls.Templates;
+using CCSWE.Avalonia.ViewLocator;
 using Remote.Adb.Desktop.Common;
 
 namespace Remote.Adb.Desktop;
 
 /// <summary>
-/// Given a view model, returns the corresponding view if possible.
+/// Resolves a view model to its view through DI. The view-model → view pairs are generated at compile time from
+/// the same-namespace <c>XxxViewModel</c> → <c>XxxView</c> convention; each view is constructed by the container
+/// so views can take constructor dependencies. Only the page view models hosted via the shell's content area flow
+/// through here; detail panes, list rows, and dialog windows are instantiated directly by XAML.
 /// </summary>
-[RequiresUnreferencedCode(
-    "Default implementation of ViewLocator involves reflection which may be trimmed away.",
-    Url = "https://docs.avaloniaui.net/docs/concepts/view-locator")]
-public class ViewLocator : IDataTemplate
-{
-    public Control? Build(object? param)
-    {
-        if (param is null)
-            return null;
-
-        var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
-        var type = Type.GetType(name);
-
-        if (type != null)
-        {
-            return (Control) Activator.CreateInstance(type)!;
-        }
-
-        return new TextBlock {Text = "Not Found: " + name};
-    }
-
-    public bool Match(object? data)
-    {
-        return data is ViewModelBase;
-    }
-}
+[GenerateViewLocator(typeof(ViewModelBase))]
+public partial class ViewLocator;

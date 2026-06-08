@@ -17,9 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CCSWE.Avalonia.Hosting" />
+    <PackageReference Include="CCSWE.Avalonia.Hosting.Desktop" />
     <PackageReference Include="CCSWE.Avalonia.Material" />
+    <PackageReference Include="CCSWE.Avalonia.ViewLocator" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 

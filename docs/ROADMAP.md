@@ -47,6 +47,13 @@ standalone Material 3 theme + control library (tokens, M3 type scale, and contro
 `FloatingActionButton`, `CircularProgressIndicator`), dark by default. ✅ Done.
 See [tasks/0004-design-system-theme.md](tasks/0004-design-system-theme.md).
 
+Cross-cutting: **hosting + view location** — the desktop head boots on the **.NET Generic Host** via the
+**CCSWE.Avalonia.Hosting** package (`DesktopApplication.CreateBuilder<App>` wraps Avalonia's `AppBuilder` in the
+host for standard DI / configuration / lifetime), and view resolution is generated at compile time by the
+**CCSWE.Avalonia.ViewLocator** source generator (a `[GenerateViewLocator]` partial mapping each same-namespace
+`XxxViewModel` → `XxxView`, resolved from DI — no reflection). Both began as in-repo glue and were extracted into
+standalone, published CCSWE packages. ✅ Done.
+
 Legend: ✅ done · 🚧 in progress · ⬜ planned
 
 ## Working notes

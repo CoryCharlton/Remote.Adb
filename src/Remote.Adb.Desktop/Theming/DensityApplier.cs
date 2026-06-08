@@ -1,4 +1,3 @@
-using System.Linq;
 using Avalonia;
 using CCSWE.Avalonia.Material;
 using Remote.Adb.Core.Settings;

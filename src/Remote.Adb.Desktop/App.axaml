@@ -5,10 +5,7 @@
              xmlns:theme="using:CCSWE.Avalonia.Material"
              RequestedThemeVariant="Dark">
              <!-- CCSWE design system ships dark by default. Use "Light" or "Default" (follow system) to switch. -->
-
-    <Application.DataTemplates>
-        <local:ViewLocator/>
-    </Application.DataTemplates>
+             <!-- The ViewLocator is a DI-backed data template registered in code (App.OnFrameworkInitializationCompleted). -->
 
     <Application.Styles>
         <!-- Standalone Material 3 theme: supplies the whole control surface itself, no separate base theme required. -->

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Remote.Adb.Desktop.Common;
 
 namespace Remote.Adb.Desktop.Emulators;

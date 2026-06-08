@@ -1,5 +1,3 @@
-using System;
-
 namespace Remote.Adb.Core.Emulators;
 
 /// <summary>

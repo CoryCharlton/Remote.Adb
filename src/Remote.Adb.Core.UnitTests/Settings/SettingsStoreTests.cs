@@ -1,6 +1,4 @@
-using System;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using NUnit.Framework;
 using Remote.Adb.Core.Settings;
 using Remote.Adb.Core.UnitTests.Fakes;

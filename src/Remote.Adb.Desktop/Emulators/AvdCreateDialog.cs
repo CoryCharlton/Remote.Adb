@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
 

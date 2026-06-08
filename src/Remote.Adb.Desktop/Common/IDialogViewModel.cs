@@ -1,5 +1,3 @@
-using System;
-
 namespace Remote.Adb.Desktop.Common;
 
 /// <summary>
