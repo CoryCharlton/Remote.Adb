@@ -28,9 +28,9 @@ public static class SystemImageScanner
 
         foreach (var apiDirectory in Directory.EnumerateDirectories(root))
         {
-            var apiName = Path.GetFileName(apiDirectory); // e.g. "android-34"
+            var apiName = Path.GetFileName(apiDirectory); // e.g. "android-34" or "android-36.1"
             if (!apiName.StartsWith("android-", StringComparison.Ordinal)
-                || !int.TryParse(apiName["android-".Length..], out var apiLevel))
+                || !AndroidApiLevels.TryParseLevel(apiName, out var apiLevel))
             {
                 continue;
             }

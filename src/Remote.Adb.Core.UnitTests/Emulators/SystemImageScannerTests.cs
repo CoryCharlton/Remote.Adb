@@ -49,6 +49,18 @@ public class SystemImageScannerTests
         }
 
         [Test]
+        public void It_includes_minor_version_api_directories()
+        {
+            CreateImage("android-36.1", "google_apis_playstore", "x86_64");
+
+            var images = SystemImageScanner.Scan(_root);
+
+            Assert.That(images, Has.Count.EqualTo(1));
+            Assert.That(images[0].Package, Is.EqualTo("system-images;android-36.1;google_apis_playstore;x86_64"));
+            Assert.That(images[0].ApiLevel, Is.EqualTo(36));
+        }
+
+        [Test]
         public void It_skips_non_numeric_api_directories()
         {
             CreateImage("android-TiramisuPrivacySandbox", "google_apis", "x86_64");

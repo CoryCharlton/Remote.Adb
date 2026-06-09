@@ -133,12 +133,12 @@ public sealed class AvdConfiguration
             return null;
         }
 
-        // e.g. "system-images/android-34/google_apis/x86_64/" -> 34.
+        // e.g. "system-images/android-34/google_apis/x86_64/" -> 34; "android-36.1/..." -> 36.
         const string prefix = "android-";
         foreach (var segment in systemImage.Split('/', '\\'))
         {
             if (segment.StartsWith(prefix, StringComparison.Ordinal)
-                && int.TryParse(segment[prefix.Length..], out var level))
+                && AndroidApiLevels.TryParseLevel(segment, out var level))
             {
                 return level;
             }

@@ -33,6 +33,20 @@ public static class AndroidApiLevels
     public static string DisplayName(int apiLevel) =>
         Versions.TryGetValue(apiLevel, out var version) ? $"Android {version}" : $"API {apiLevel}";
 
+    /// <summary>
+    /// Parses the numeric API level from an <c>android-&lt;n&gt;</c> token, tolerating a minor-version suffix —
+    /// e.g. "android-34", "34", and "android-36.1" yield 34, 34, and 36 (the major level). Returns
+    /// <see langword="false"/> when there's no leading integer (e.g. a preview codename like "android-Baklava").
+    /// </summary>
+    public static bool TryParseLevel(string token, out int apiLevel)
+    {
+        const string prefix = "android-";
+        var value = token.StartsWith(prefix, StringComparison.Ordinal) ? token[prefix.Length..] : token;
+        var major = value.Split('.', 2)[0];
+
+        return int.TryParse(major, out apiLevel);
+    }
+
     /// <summary>The marketing version string (e.g. 34 → "14"), or <see langword="null"/> if unknown.</summary>
     public static string? Version(int apiLevel) =>
         Versions.TryGetValue(apiLevel, out var version) ? version : null;
