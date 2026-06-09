@@ -7,8 +7,11 @@ namespace Remote.Adb.Core.Emulators;
 /// </summary>
 public interface IAvdProvisioningService
 {
-    /// <summary>Creates an AVD (<c>avdmanager create avd</c>). Returns whether it succeeded.</summary>
-    Task<bool> CreateAsync(string avdId, string systemImagePackage, string device, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Creates an AVD (<c>avdmanager create avd</c>), returning whether it succeeded along with the tool's own
+    /// message on failure.
+    /// </summary>
+    Task<AvdOperationResult> CreateAsync(string avdId, string systemImagePackage, string device, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes an AVD (<c>avdmanager delete avd</c>). Returns whether it succeeded.</summary>
     Task<bool> DeleteAsync(string avdId, CancellationToken cancellationToken = default);

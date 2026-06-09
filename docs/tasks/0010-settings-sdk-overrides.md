@@ -10,9 +10,11 @@ precedence over the env vars; left blank, today's env-var behavior is unchanged.
 
 - **Android SDK path** — overrides `ANDROID_HOME`/`ANDROID_SDK_ROOT` in `AndroidSdk.ResolveSdkRoot`.
 - **AVD home** — overrides `ANDROID_AVD_HOME` in `AvdHome.Resolve`.
-- **Java home (JDK/JBR)** — `avdmanager`/`sdkmanager` are Java wrappers; when set, launch them with
-  `JAVA_HOME` pointed here (set it on the `ProcessStartInfo.Environment` for those processes). Common default:
-  Android Studio's bundled JBR (`<Studio>\jbr`).
+- **Java home (JDK)** — `avdmanager`/`sdkmanager` are Java wrappers. They already find a JDK on their own via
+  `JAVA_HOME` or any `java` on `PATH`, so **no install-path probing** — Android Studio need not be installed at
+  all; a standalone JDK works. The override is for the case where neither is set: when configured, launch those
+  tools with `JAVA_HOME` pointed here (set it on the `ProcessStartInfo.Environment` for those processes). The
+  user can point it at Android Studio's bundled JBR (`<Studio>/jbr`) or any JDK.
 
 ## Approach
 
@@ -37,6 +39,15 @@ wrong SDK — or doesn't exist — the user just sees empty device/image lists w
 
 ## Why now-ish
 
-Surfaced while debugging create: a user's `avdmanager` failed with `could not open …\jbr\lib\jvm.cfg` (broken
-JBR / `JAVA_HOME`), and their `avdmanager` lived in `tools/bin` not `cmdline-tools/latest/bin`. Path resolution
-was made robust in 0008; the **Java/SDK override** is the remaining gap this task closes.
+Surfaced repeatedly while debugging create:
+
+- On a Linux box with no `JAVA_HOME` and no `java` on `PATH`, `avdmanager` exited 1 with
+  `ERROR: JAVA_HOME is not set and no 'java' command could be found` — printed to **stdout**, which the app was
+  discarding, so the dialog showed only a generic "Check the SDK installation." `CreateAsync` now returns the
+  tool's merged stdout/stderr (`AvdOperationResult`) so the real reason shows; the **override** is what lets the
+  user fix it from inside the app.
+- Earlier: a user's `avdmanager` failed with `could not open …\jbr\lib\jvm.cfg` (broken JBR / `JAVA_HOME`), and
+  their `avdmanager` lived in `tools/bin` not `cmdline-tools/latest/bin`.
+
+Path resolution was made robust in 0008, and create failures are now legible; the **Java/SDK override** (+ the
+unresolved-SDK warning above) is the remaining gap this task closes.

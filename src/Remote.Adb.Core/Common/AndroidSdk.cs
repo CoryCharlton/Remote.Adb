@@ -93,6 +93,8 @@ public sealed class AndroidSdk : IAndroidSdk
     {
         var candidates = new[]
         {
+            // ANDROID_HOME is the current variable; ANDROID_SDK_ROOT is deprecated but still honored as a
+            // fallback. The platform default (Android Studio's install location) is the last resort.
             Environment.GetEnvironmentVariable("ANDROID_HOME"),
             Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
             DefaultSdkRoot(),

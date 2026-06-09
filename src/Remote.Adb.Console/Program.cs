@@ -162,9 +162,10 @@ static async Task<int> HandleEmulatorAsync(string[] args, IEmulatorService emula
                 return 1;
             }
 
-            if (!await provisioning.CreateAsync(name, package, deviceId))
+            var createResult = await provisioning.CreateAsync(name, package, deviceId);
+            if (!createResult.Success)
             {
-                Console.Error.WriteLine("avdmanager could not create the AVD. Check the SDK installation.");
+                Console.Error.WriteLine(createResult.Error ?? "avdmanager could not create the AVD. Check the SDK installation.");
                 return 1;
             }
 

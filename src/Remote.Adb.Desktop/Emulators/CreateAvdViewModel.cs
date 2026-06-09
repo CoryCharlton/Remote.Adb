@@ -206,9 +206,10 @@ public partial class CreateAvdViewModel : ViewModelBase, IDialogViewModel
             {
                 var avdId = Name.Trim();
 
-                if (!await _provisioning.CreateAsync(avdId, SelectedImage.Package, SelectedDevice.Id))
+                var result = await _provisioning.CreateAsync(avdId, SelectedImage.Package, SelectedDevice.Id);
+                if (!result.Success)
                 {
-                    StatusMessage = "avdmanager could not create the AVD. Check the SDK installation.";
+                    StatusMessage = result.Error ?? "avdmanager could not create the AVD. Check the SDK installation.";
                     return;
                 }
 

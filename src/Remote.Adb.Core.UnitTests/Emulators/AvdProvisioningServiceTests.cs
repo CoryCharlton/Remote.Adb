@@ -35,7 +35,7 @@ public class AvdProvisioningServiceTests
 
             var created = await service.CreateAsync("Test_AVD", "system-images;android-34;google_apis;x86_64", "pixel_6");
 
-            Assert.That(created, Is.True);
+            Assert.That(created.Success, Is.True);
             processRunner.Verify(
                 r => r.RunAsync(
                     AvdManagerPath,
@@ -51,7 +51,7 @@ public class AvdProvisioningServiceTests
         }
 
         [Test]
-        public async Task It_returns_false_when_avdmanager_fails()
+        public async Task It_returns_failure_with_the_tool_output()
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
@@ -60,7 +60,22 @@ public class AvdProvisioningServiceTests
 
             var created = await CreateService(processRunner).CreateAsync("Test_AVD", "pkg", "pixel_6");
 
-            Assert.That(created, Is.False);
+            Assert.That(created.Success, Is.False);
+            Assert.That(created.Error, Is.EqualTo("boom"));
+        }
+
+        [Test]
+        public async Task It_surfaces_stdout_when_avdmanager_writes_the_error_there()
+        {
+            var processRunner = new Mock<IProcessRunner>();
+            processRunner
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ProcessResult(1, "ERROR: JAVA_HOME is not set and no 'java' command could be found.", string.Empty));
+
+            var created = await CreateService(processRunner).CreateAsync("Test_AVD", "pkg", "pixel_6");
+
+            Assert.That(created.Success, Is.False);
+            Assert.That(created.Error, Does.Contain("JAVA_HOME"));
         }
     }
 

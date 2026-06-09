@@ -24,7 +24,7 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
     }
 
     /// <inheritdoc />
-    public async Task<bool> CreateAsync(string avdId, string systemImagePackage, string device, CancellationToken cancellationToken = default)
+    public async Task<AvdOperationResult> CreateAsync(string avdId, string systemImagePackage, string device, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating AVD {AvdId} from {Package} on {Device}", avdId, systemImagePackage, device);
 
@@ -34,12 +34,15 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
             DeclineCustomHardware,
             cancellationToken);
 
-        if (!result.Success)
+        if (result.Success)
         {
-            _logger.LogWarning("Creating {AvdId} exited with code {ExitCode}: {Error}", avdId, result.ExitCode, result.StandardError);
+            return AvdOperationResult.Ok;
         }
 
-        return result.Success;
+        var detail = DescribeFailure(result);
+        _logger.LogWarning("Creating {AvdId} exited with code {ExitCode}: {Detail}", avdId, result.ExitCode, detail ?? "(no output)");
+
+        return AvdOperationResult.Fail(detail);
     }
 
     /// <inheritdoc />
@@ -58,6 +61,19 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
         }
 
         return result.Success;
+    }
+
+    // avdmanager prints its failures (a missing JDK, an unknown device, a bad package) to stdout, not stderr,
+    // so merge both streams to surface the real reason instead of an empty error.
+    private static string? DescribeFailure(ProcessResult result)
+    {
+        var detail = string.Join(
+            Environment.NewLine,
+            new[] { result.StandardError, result.StandardOutput }
+                .Where(stream => !string.IsNullOrWhiteSpace(stream))
+                .Select(stream => stream.Trim()));
+
+        return string.IsNullOrWhiteSpace(detail) ? null : detail;
     }
 
     /// <inheritdoc />
