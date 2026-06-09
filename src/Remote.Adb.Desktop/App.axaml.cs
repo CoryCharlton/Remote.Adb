@@ -46,10 +46,7 @@ public partial class App : Application, IServiceProviderAccessor
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = Services.GetRequiredService<MainWindowViewModel>(),
-            };
+            desktop.MainWindow = Services.GetRequiredService<MainWindow>();
         }
 
         base.OnFrameworkInitializationCompleted();

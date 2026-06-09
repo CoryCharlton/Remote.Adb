@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Remote.Adb.Core;
 using Remote.Adb.Desktop.Common;
+using Remote.Adb.Desktop.Common.Notifications;
 using Remote.Adb.Desktop.Devices;
 using Remote.Adb.Desktop.Emulators;
 using Remote.Adb.Desktop.Settings;
@@ -24,9 +25,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDensityApplier, DensityApplier>();
         services.AddSingleton<IConfirmDialog, ConfirmDialog>();
         services.AddSingleton<IAvdCreateDialog, AvdCreateDialog>();
+        services.AddSingleton<NotificationService>();
+        services.AddSingleton<INotificationService>(provider => provider.GetRequiredService<NotificationService>());
 
         services.AddHostedService<DeviceCatalogWarmup>();
 
+        services.AddTransient<MainWindow>();
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<EmulatorViewModel>();
         services.AddTransient<DevicesViewModel>();

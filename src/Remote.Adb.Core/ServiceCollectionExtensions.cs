@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Remote.Adb.Core.Common;
+using Remote.Adb.Core.Diagnostics;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Core.Settings;
 
@@ -18,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAvdConfigStore, AvdConfigStore>();
         services.AddSingleton<IAvdProvisioningService, AvdProvisioningService>();
         services.AddSingleton<IEmulatorService, EmulatorService>();
+        services.AddSingleton<ISdkDiagnostics, SdkDiagnostics>();
         services.AddSingleton<ISettingsStore, SettingsStore>();
         services.AddSingleton<ISettingsService, SettingsService>();
 

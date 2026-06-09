@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Remote.Adb.Core.Diagnostics;
 using Remote.Adb.Desktop.Common;
+using Remote.Adb.Desktop.Common.Notifications;
 using Remote.Adb.Desktop.Devices;
 using Remote.Adb.Desktop.Emulators;
 using Remote.Adb.Desktop.Settings;
@@ -22,7 +24,9 @@ public partial class MainWindowViewModel : ViewModelBase
         EmulatorViewModel emulator,
         DevicesViewModel devices,
         TunnelViewModel tunnel,
-        SettingsViewModel settings)
+        SettingsViewModel settings,
+        ISdkDiagnostics diagnostics,
+        INotificationService notifications)
     {
         Destinations =
         [
@@ -34,6 +38,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Set via the property (not the field) so the initial destination is activated too.
         SelectedDestination = Destinations[0];
+
+        NotifyToolDiagnostics(diagnostics, notifications);
     }
 
     public ViewModelBase CurrentScreen => (SelectedDestination ?? Destinations[0]).Screen;
@@ -42,6 +48,26 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // Labeled drawer (260) collapses to the icon rail (80).
     public double DrawerLength => IsRail ? 80 : 260;
+
+    [RelayCommand]
+    private void GoToSettings()
+    {
+        SelectedDestination = Destinations.First(destination => destination.Label == "Settings");
+    }
+
+    // Surface any unconfigured-tool diagnostics (SDK / JDK) as one persistent toast each; clicking opens Settings.
+    // The notification service buffers these until the shell window attaches its sink, so they appear on open.
+    private void NotifyToolDiagnostics(ISdkDiagnostics diagnostics, INotificationService notifications)
+    {
+        foreach (var diagnostic in diagnostics.Evaluate())
+        {
+            var severity = diagnostic.Severity == DiagnosticSeverity.Error
+                ? NotificationSeverity.Error
+                : NotificationSeverity.Warning;
+
+            notifications.Show(diagnostic.Title, diagnostic.Message, severity, TimeSpan.Zero, () => GoToSettingsCommand.Execute(null));
+        }
+    }
 
     // Let a screen run its activation logic (e.g. load its data) when it becomes selected.
     // Fire-and-forget is fine: activation handlers surface their own errors to the screen.

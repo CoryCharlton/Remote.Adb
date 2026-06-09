@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Remote.Adb.Desktop.Shell"
         xmlns:conv="using:Remote.Adb.Desktop.Common.Converters"
+        xmlns:notifications="using:Avalonia.Controls.Notifications"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
@@ -24,6 +25,8 @@
             <Setter Property="RenderTransform" Value="rotate(180deg)"/>
         </Style>
     </Window.Styles>
+
+    <Panel>
 
     <DrawerPage DrawerBehavior="Locked" IsOpen="True" DrawerLength="{Binding DrawerLength}">
 
@@ -96,5 +99,11 @@
                         DataContext="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext)}"/>
 
     </DrawerPage>
+
+    <!-- Declared in the tree (not constructed in code) so it's laid out before the first Show. -->
+    <notifications:WindowNotificationManager x:Name="NotificationManager"
+                                             Position="BottomRight" MaxItems="5"/>
+
+    </Panel>
 
 </Window>
