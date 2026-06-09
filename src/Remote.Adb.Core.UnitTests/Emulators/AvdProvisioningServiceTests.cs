@@ -12,11 +12,12 @@ public class AvdProvisioningServiceTests
 {
     private const string AvdManagerPath = "/sdk/cmdline-tools/latest/bin/avdmanager";
 
-    private static AvdProvisioningService CreateService(Mock<IProcessRunner> processRunner, string? sdkRoot = null)
+    private static AvdProvisioningService CreateService(Mock<IProcessRunner> processRunner, string? sdkRoot = null, string? javaHome = null)
     {
         var sdk = new Mock<IAndroidSdk>();
         sdk.SetupGet(s => s.AvdManagerPath).Returns(AvdManagerPath);
         sdk.SetupGet(s => s.SdkRoot).Returns(sdkRoot);
+        sdk.SetupGet(s => s.JavaHome).Returns(javaHome);
 
         return new AvdProvisioningService(processRunner.Object, sdk.Object, new LoggerFake<AvdProvisioningService>());
     }
@@ -28,7 +29,7 @@ public class AvdProvisioningServiceTests
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
-                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ProcessResult(0, string.Empty, string.Empty));
 
             var service = CreateService(processRunner);
@@ -46,6 +47,29 @@ public class AvdProvisioningServiceTests
                         "-d", "pixel_6",
                     })),
                     "no\n",
+                    It.IsAny<IReadOnlyDictionary<string, string>?>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Test]
+        public async Task It_passes_java_home_to_the_tool_when_resolved()
+        {
+            var processRunner = new Mock<IProcessRunner>();
+            processRunner
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ProcessResult(0, string.Empty, string.Empty));
+
+            var service = CreateService(processRunner, javaHome: "/opt/jdk");
+
+            await service.CreateAsync("Test_AVD", "pkg", "pixel_6");
+
+            processRunner.Verify(
+                r => r.RunAsync(
+                    AvdManagerPath,
+                    It.IsAny<IReadOnlyList<string>>(),
+                    It.IsAny<string?>(),
+                    It.Is<IReadOnlyDictionary<string, string>?>(environment => environment != null && environment["JAVA_HOME"] == "/opt/jdk"),
                     It.IsAny<CancellationToken>()),
                 Times.Once);
         }
@@ -55,7 +79,7 @@ public class AvdProvisioningServiceTests
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
-                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ProcessResult(1, string.Empty, "boom"));
 
             var created = await CreateService(processRunner).CreateAsync("Test_AVD", "pkg", "pixel_6");
@@ -69,7 +93,7 @@ public class AvdProvisioningServiceTests
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
-                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ProcessResult(1, "ERROR: JAVA_HOME is not set and no 'java' command could be found.", string.Empty));
 
             var created = await CreateService(processRunner).CreateAsync("Test_AVD", "pkg", "pixel_6");
@@ -86,7 +110,7 @@ public class AvdProvisioningServiceTests
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
-                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ProcessResult(0, string.Empty, string.Empty));
 
             await CreateService(processRunner).DeleteAsync("Test_AVD");
@@ -96,6 +120,7 @@ public class AvdProvisioningServiceTests
                     AvdManagerPath,
                     It.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "delete", "avd", "-n", "Test_AVD" })),
                     It.IsAny<string?>(),
+                    It.IsAny<IReadOnlyDictionary<string, string>?>(),
                     It.IsAny<CancellationToken>()),
                 Times.Once);
         }
@@ -108,7 +133,7 @@ public class AvdProvisioningServiceTests
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
-                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ProcessResult(0, "id: 9 or \"pixel_6\"\n    Name: Pixel 6\n    OEM : Google\n---------\n", string.Empty));
 
             var devices = await CreateService(processRunner).ListDevicesAsync();

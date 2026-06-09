@@ -1,10 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
+using Moq;
 using NUnit.Framework;
 using Remote.Adb.Core.Emulators;
+using Remote.Adb.Core.Settings;
 using Remote.Adb.Core.UnitTests.Fakes;
 
 namespace Remote.Adb.Core.UnitTests.Emulators;
 
+// Mutates the ANDROID_AVD_HOME environment variable, so it must not run alongside other fixtures.
+[NonParallelizable]
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public class AvdConfigStoreTests
 {
@@ -31,7 +35,8 @@ public class AvdConfigStoreTests
         }
     }
 
-    protected static AvdConfigStore CreateStore() => new(new LoggerFake<AvdConfigStore>());
+    // No AvdHome override (default), so resolution falls through to the ANDROID_AVD_HOME set in SetUp.
+    protected static AvdConfigStore CreateStore() => new(Mock.Of<ISettingsService>(), new LoggerFake<AvdConfigStore>());
 
     protected string WriteAvd(string folder, string config)
     {

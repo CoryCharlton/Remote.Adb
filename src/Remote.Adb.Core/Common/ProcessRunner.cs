@@ -14,13 +14,22 @@ public sealed class ProcessRunner : IProcessRunner
         _logger = logger;
     }
 
-    private static ProcessStartInfo CreateStartInfo(string fileName, IReadOnlyList<string> arguments)
+    private static ProcessStartInfo CreateStartInfo(string fileName, IReadOnlyList<string> arguments, IReadOnlyDictionary<string, string>? environment = null)
     {
         var startInfo = new ProcessStartInfo
         {
             UseShellExecute = false,
             CreateNoWindow = true,
         };
+
+        // Overlay extra environment variables (e.g. JAVA_HOME for avdmanager/sdkmanager) onto the inherited block.
+        if (environment is not null)
+        {
+            foreach (var (key, value) in environment)
+            {
+                startInfo.Environment[key] = value;
+            }
+        }
 
         // On Windows a .bat/.cmd (avdmanager, sdkmanager) isn't a valid executable for CreateProcess —
         // Process.Start throws Win32Exception. Run it through the command interpreter instead.
@@ -76,9 +85,9 @@ public sealed class ProcessRunner : IProcessRunner
     }
 
     /// <inheritdoc />
-    public async Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, string? standardInput = null, CancellationToken cancellationToken = default)
+    public async Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, string? standardInput = null, IReadOnlyDictionary<string, string>? environment = null, CancellationToken cancellationToken = default)
     {
-        var startInfo = CreateStartInfo(fileName, arguments);
+        var startInfo = CreateStartInfo(fileName, arguments, environment);
         startInfo.RedirectStandardOutput = true;
         startInfo.RedirectStandardError = true;
         startInfo.RedirectStandardInput = standardInput is not null;

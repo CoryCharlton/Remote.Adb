@@ -2,28 +2,83 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Remote.Adb.Desktop.Settings"
              xmlns:theme="using:CCSWE.Avalonia.Material"
+             xmlns:converters="using:Avalonia.Data.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
              x:Class="Remote.Adb.Desktop.Settings.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
-    <StackPanel Margin="{DynamicResource Spacing6Thickness}" Spacing="16">
-        <TextBlock Classes="HeadlineSmall" Text="Settings"
-                   Foreground="{DynamicResource OnSurfaceStrong}"/>
+    <UserControl.Styles>
+        <!-- Inline validation message under a path field. -->
+        <Style Selector="TextBlock.Error">
+            <Setter Property="Foreground" Value="{DynamicResource Error}"/>
+        </Style>
+        <!-- Muted caption (watermark hints, the effective-path readout). -->
+        <Style Selector="TextBlock.Caption">
+            <Setter Property="Foreground" Value="{DynamicResource OnSurfaceVariant}"/>
+        </Style>
+    </UserControl.Styles>
 
-        <theme:Card Classes="Elevated">
-            <StackPanel Spacing="4">
-                <TextBlock Classes="TitleMedium" Text="Appearance"
-                           Foreground="{DynamicResource OnSurface}"/>
-                <TextBlock Classes="BodySmall" Text="Switch the color theme and layout density."
-                           Foreground="{DynamicResource OnSurfaceVariant}"/>
-                <ToggleSwitch Content="Light mode" Margin="0,8,0,0"
-                              IsChecked="{Binding IsLightTheme}"/>
-                <ToggleSwitch Content="Compact density"
-                              IsChecked="{Binding IsCompactDensity}"/>
-            </StackPanel>
-        </theme:Card>
-    </StackPanel>
+    <ScrollViewer>
+        <StackPanel Margin="{DynamicResource Spacing6Thickness}" Spacing="16">
+            <TextBlock Classes="HeadlineSmall" Text="Settings"
+                       Foreground="{DynamicResource OnSurfaceStrong}"/>
+
+            <theme:Card Classes="Elevated">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="TitleMedium" Text="Appearance"
+                               Foreground="{DynamicResource OnSurface}"/>
+                    <TextBlock Classes="BodySmall" Text="Switch the color theme and layout density."
+                               Foreground="{DynamicResource OnSurfaceVariant}"/>
+                    <StackPanel Spacing="12" Margin="0,8,0,0">
+                        <ToggleSwitch Content="Light mode" IsChecked="{Binding IsLightTheme}"/>
+                        <ToggleSwitch Content="Compact density" IsChecked="{Binding IsCompactDensity}"/>
+                    </StackPanel>
+                </StackPanel>
+            </theme:Card>
+
+            <theme:Card Classes="Elevated">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="TitleMedium" Text="Android SDK"
+                               Foreground="{DynamicResource OnSurface}"/>
+                    <TextBlock Classes="BodySmall" TextWrapping="Wrap"
+                               Text="Point the app at the Android SDK, AVD home, and JDK. Leave a field blank to use the environment variables (ANDROID_HOME / JAVA_HOME) and default locations."
+                               Foreground="{DynamicResource OnSurfaceVariant}"/>
+
+                    <StackPanel Spacing="16" Margin="0,8,0,0">
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="LabelMedium" Text="SDK path (ANDROID_HOME)"/>
+                            <TextBox Text="{Binding SdkRootOverride, UpdateSourceTrigger=LostFocus}"
+                                     PlaceholderText="Leave blank to auto-detect"/>
+                            <TextBlock Classes="BodySmall Error" Text="{Binding SdkRootError}"
+                                       IsVisible="{Binding SdkRootError, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}"/>
+                            <TextBlock Classes="BodySmall Caption" TextWrapping="Wrap" Text="{Binding SdkStatus}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="LabelMedium" Text="AVD home (ANDROID_AVD_HOME)"/>
+                            <TextBox Text="{Binding AvdHomeOverride, UpdateSourceTrigger=LostFocus}"
+                                     PlaceholderText="Leave blank to auto-detect"/>
+                            <TextBlock Classes="BodySmall Error" Text="{Binding AvdHomeError}"
+                                       IsVisible="{Binding AvdHomeError, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}"/>
+                            <TextBlock Classes="BodySmall Caption" TextWrapping="Wrap" Text="{Binding AvdHomeStatus}"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="LabelMedium" Text="JDK path (JAVA_HOME)"/>
+                            <TextBox Text="{Binding JavaHomeOverride, UpdateSourceTrigger=LostFocus}"
+                                     PlaceholderText="Leave blank to use JAVA_HOME / PATH"/>
+                            <TextBlock Classes="BodySmall Error" Text="{Binding JavaHomeError}"
+                                       IsVisible="{Binding JavaHomeError, Converter={x:Static converters:StringConverters.IsNotNullOrEmpty}}"/>
+                            <TextBlock Classes="BodySmall Caption" TextWrapping="Wrap" Text="{Binding JavaStatus}"/>
+                        </StackPanel>
+
+                    </StackPanel>
+                </StackPanel>
+            </theme:Card>
+        </StackPanel>
+    </ScrollViewer>
 
 </UserControl>

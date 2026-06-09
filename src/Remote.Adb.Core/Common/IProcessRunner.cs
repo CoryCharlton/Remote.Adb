@@ -10,9 +10,10 @@ public interface IProcessRunner
     /// <summary>
     /// Runs <paramref name="fileName"/> to completion and captures its output. When
     /// <paramref name="standardInput"/> is supplied it is written to the process's stdin (which is then
-    /// closed) — needed for tools that prompt, such as <c>avdmanager create avd</c>.
+    /// closed) — needed for tools that prompt, such as <c>avdmanager create avd</c>. <paramref name="environment"/>
+    /// overlays variables onto the child's environment (e.g. <c>JAVA_HOME</c> for the Java-based tools).
     /// </summary>
-    Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, string? standardInput = null, CancellationToken cancellationToken = default);
+    Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, string? standardInput = null, IReadOnlyDictionary<string, string>? environment = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Starts <paramref name="fileName"/> without waiting for it to exit, for long-running

@@ -15,6 +15,7 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
     private readonly ILogger<AvdProvisioningService> _logger;
     private readonly IProcessRunner _processRunner;
     private IReadOnlyList<DeviceProfile>? _cachedDevices;
+    private string? _cachedDevicesRoot;
 
     public AvdProvisioningService(IProcessRunner processRunner, IAndroidSdk androidSdk, ILogger<AvdProvisioningService> logger)
     {
@@ -32,6 +33,7 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
             _androidSdk.AvdManagerPath,
             ["create", "avd", "-n", avdId, "-k", systemImagePackage, "-d", device],
             DeclineCustomHardware,
+            ToolEnvironment(),
             cancellationToken);
 
         if (result.Success)
@@ -53,6 +55,7 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
         var result = await _processRunner.RunAsync(
             _androidSdk.AvdManagerPath,
             ["delete", "avd", "-n", avdId],
+            environment: ToolEnvironment(),
             cancellationToken: cancellationToken);
 
         if (!result.Success)
@@ -84,8 +87,10 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
     public async Task<IReadOnlyList<DeviceProfile>> ListDevicesAsync(CancellationToken cancellationToken = default)
     {
         // avdmanager spins up a JVM and is slow (~seconds); the device catalog rarely changes within a
-        // session, so cache the first successful result.
-        if (_cachedDevices is not null)
+        // session, so cache the first successful result — but keyed on the SDK root, so changing the SDK-path
+        // override at runtime invalidates the cache and the new SDK's devices are picked up without a restart.
+        var sdkRoot = _androidSdk.SdkRoot;
+        if (_cachedDevices is not null && _cachedDevicesRoot == sdkRoot)
         {
             return _cachedDevices;
         }
@@ -95,17 +100,18 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
         await _devicesLock.WaitAsync(cancellationToken);
         try
         {
-            if (_cachedDevices is not null)
+            if (_cachedDevices is not null && _cachedDevicesRoot == sdkRoot)
             {
                 return _cachedDevices;
             }
 
             // Prefer the rich device definitions (with screen specs + form factor) read straight from the
             // SDK — no JVM, and far more detail than avdmanager exposes.
-            var fromDefinitions = DeviceDefinitionReader.Read(_androidSdk.SdkRoot);
+            var fromDefinitions = DeviceDefinitionReader.Read(sdkRoot);
             if (fromDefinitions.Count > 0)
             {
                 _logger.LogDebug("Loaded {Count} device definitions from the SDK device XML.", fromDefinitions.Count);
+                _cachedDevicesRoot = sdkRoot;
                 return _cachedDevices = fromDefinitions;
             }
 
@@ -114,6 +120,7 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
             var result = await _processRunner.RunAsync(
                 _androidSdk.AvdManagerPath,
                 ["list", "device"],
+                environment: ToolEnvironment(),
                 cancellationToken: cancellationToken);
 
             var devices = AvdManagerOutputParser.ParseDevices(result.StandardOutput);
@@ -131,11 +138,21 @@ public sealed class AvdProvisioningService : IAvdProvisioningService
                 return devices;
             }
 
+            _cachedDevicesRoot = sdkRoot;
             return _cachedDevices = devices;
         }
         finally
         {
             _devicesLock.Release();
         }
+    }
+
+    // avdmanager/sdkmanager are JVM wrappers; when a JDK is resolved (the override, else JAVA_HOME) pass it
+    // through so they run even with JAVA_HOME unset. Null when none is resolved — the tools then look for java
+    // on PATH themselves.
+    private IReadOnlyDictionary<string, string>? ToolEnvironment()
+    {
+        var javaHome = _androidSdk.JavaHome;
+        return javaHome is null ? null : new Dictionary<string, string> { ["JAVA_HOME"] = javaHome };
     }
 }

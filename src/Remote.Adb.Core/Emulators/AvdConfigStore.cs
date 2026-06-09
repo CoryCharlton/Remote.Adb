@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Remote.Adb.Core.Settings;
 
 namespace Remote.Adb.Core.Emulators;
 
@@ -6,9 +7,11 @@ namespace Remote.Adb.Core.Emulators;
 public sealed class AvdConfigStore : IAvdConfigStore
 {
     private readonly ILogger<AvdConfigStore> _logger;
+    private readonly ISettingsService _settings;
 
-    public AvdConfigStore(ILogger<AvdConfigStore> logger)
+    public AvdConfigStore(ISettingsService settings, ILogger<AvdConfigStore> logger)
     {
+        _settings = settings;
         _logger = logger;
     }
 
@@ -16,7 +19,7 @@ public sealed class AvdConfigStore : IAvdConfigStore
     // Locate (which filters by AvdId) and ReadAll, so the directory walk and parsing live in one place.
     private IEnumerable<Located> EnumerateAll()
     {
-        var avdHome = AvdHome.Resolve();
+        var avdHome = AvdHome.Resolve(_settings.AvdHome);
         if (avdHome is null)
         {
             _logger.LogDebug("AVD home not found.");

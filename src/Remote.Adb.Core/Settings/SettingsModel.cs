@@ -10,6 +10,9 @@ namespace Remote.Adb.Core.Settings;
 /// </summary>
 public sealed class SettingsModel
 {
+    /// <summary>Override for the AVD home directory; <see langword="null"/> uses the env-var/default resolution.</summary>
+    public string? AvdHome { get; set; }
+
     /// <summary>The selected layout density. Serialized as its enum name.</summary>
     public AppDensity Density { get; set; } = AppDensity.Compact;
 
@@ -19,6 +22,12 @@ public sealed class SettingsModel
     /// </summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Extra { get; set; }
+
+    /// <summary>Override for the Java home (JDK) directory; <see langword="null"/> uses <c>JAVA_HOME</c>/PATH.</summary>
+    public string? JavaHome { get; set; }
+
+    /// <summary>Override for the Android SDK root; <see langword="null"/> uses the env-var/default resolution.</summary>
+    public string? SdkRoot { get; set; }
 
     /// <summary>The selected application color theme. Serialized as its enum name.</summary>
     public AppTheme Theme { get; set; } = AppTheme.Dark;

@@ -1,44 +1,66 @@
 using Microsoft.Extensions.Logging;
+using Remote.Adb.Core.Settings;
 
 namespace Remote.Adb.Core.Common;
 
 /// <inheritdoc />
 public sealed class AndroidSdk : IAndroidSdk
 {
-    public AndroidSdk(ILogger<AndroidSdk> logger)
-    {
-        SdkRoot = ResolveSdkRoot();
+    private readonly ISettingsService _settings;
 
-        if (SdkRoot is null)
+    public AndroidSdk(ISettingsService settings, ILogger<AndroidSdk> logger)
+    {
+        _settings = settings;
+
+        // Resolution happens live on each property access (so a Settings override applies without a restart);
+        // resolve once here only to log the startup snapshot for diagnostics.
+        var (root, source) = ResolveSdkRoot();
+        if (root is null)
         {
             logger.LogWarning(
-                "Android SDK root not found (set ANDROID_HOME); falling back to PATH for adb/emulator/avdmanager.");
+                "Android SDK root not found (set ANDROID_HOME or the Settings override); falling back to PATH for adb/emulator/avdmanager.");
         }
         else
         {
-            logger.LogDebug("Using Android SDK at {SdkRoot}", SdkRoot);
+            logger.LogDebug("Using Android SDK at {SdkRoot} (source {Source})", root, source);
         }
-
-        AdbPath = ResolveTool("platform-tools", Executable("adb"));
-        EmulatorPath = ResolveTool("emulator", Executable("emulator"));
-        AvdManagerPath = ResolveCmdlineTool(Script("avdmanager"));
-        SdkManagerPath = ResolveCmdlineTool(Script("sdkmanager"));
     }
 
     /// <inheritdoc />
-    public string AdbPath { get; }
+    public string AdbPath => ResolveTool("platform-tools", Executable("adb"));
 
     /// <inheritdoc />
-    public string AvdManagerPath { get; }
+    public string AvdManagerPath => ResolveCmdlineTool(Script("avdmanager"));
 
     /// <inheritdoc />
-    public string EmulatorPath { get; }
+    public string EmulatorPath => ResolveTool("emulator", Executable("emulator"));
 
     /// <inheritdoc />
-    public string SdkManagerPath { get; }
+    public string? JavaHome
+    {
+        get
+        {
+            // No install-path probing: the Java tools find a JDK themselves via JAVA_HOME or PATH, so only
+            // surface an explicit value (the override, else JAVA_HOME) for callers to pass through.
+            var value = _settings.JavaHome;
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            var env = Environment.GetEnvironmentVariable("JAVA_HOME");
+            return string.IsNullOrWhiteSpace(env) ? null : env;
+        }
+    }
 
     /// <inheritdoc />
-    public string? SdkRoot { get; }
+    public string SdkManagerPath => ResolveCmdlineTool(Script("sdkmanager"));
+
+    /// <inheritdoc />
+    public string? SdkRoot => ResolveSdkRoot().Root;
+
+    /// <inheritdoc />
+    public SdkRootSource SdkRootSource => ResolveSdkRoot().Source;
 
     private static string DefaultSdkRoot()
     {
@@ -65,53 +87,69 @@ public sealed class AndroidSdk : IAndroidSdk
     // get a usable value.
     private string ResolveCmdlineTool(string executable)
     {
-        if (SdkRoot is null)
+        var sdkRoot = SdkRoot;
+        if (sdkRoot is null)
         {
             return executable;
         }
 
         var candidates = new List<string>
         {
-            Path.Combine(SdkRoot, "cmdline-tools", "latest", "bin", executable),
+            Path.Combine(sdkRoot, "cmdline-tools", "latest", "bin", executable),
         };
 
-        var cmdlineTools = Path.Combine(SdkRoot, "cmdline-tools");
+        var cmdlineTools = Path.Combine(sdkRoot, "cmdline-tools");
         if (Directory.Exists(cmdlineTools))
         {
-            foreach (var versionDirectory in Directory.EnumerateDirectories(cmdlineTools).OrderDescending())
+            try
             {
-                candidates.Add(Path.Combine(versionDirectory, "bin", executable));
+                foreach (var versionDirectory in Directory.EnumerateDirectories(cmdlineTools).OrderDescending())
+                {
+                    candidates.Add(Path.Combine(versionDirectory, "bin", executable));
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Can't enumerate the cmdline-tools versions — fall through to the canonical/legacy candidates.
             }
         }
 
-        candidates.Add(Path.Combine(SdkRoot, "tools", "bin", executable));
+        candidates.Add(Path.Combine(sdkRoot, "tools", "bin", executable));
 
         return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
     }
 
-    private static string? ResolveSdkRoot()
+    // Override → ANDROID_HOME → ANDROID_SDK_ROOT (deprecated) → platform default, first that exists. The source
+    // is reported so the UI can warn when the path is only the default guess (or missing entirely).
+    private (string? Root, SdkRootSource Source) ResolveSdkRoot()
     {
-        var candidates = new[]
+        var overrideRoot = _settings.SdkRoot;
+        if (!string.IsNullOrWhiteSpace(overrideRoot) && Directory.Exists(overrideRoot))
         {
-            // ANDROID_HOME is the current variable; ANDROID_SDK_ROOT is deprecated but still honored as a
-            // fallback. The platform default (Android Studio's install location) is the last resort.
-            Environment.GetEnvironmentVariable("ANDROID_HOME"),
-            Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
-            DefaultSdkRoot(),
-        };
+            return (overrideRoot, SdkRootSource.Override);
+        }
 
-        return candidates.FirstOrDefault(candidate => !string.IsNullOrWhiteSpace(candidate) && Directory.Exists(candidate));
+        foreach (var variable in new[] { "ANDROID_HOME", "ANDROID_SDK_ROOT" })
+        {
+            var value = Environment.GetEnvironmentVariable(variable);
+            if (!string.IsNullOrWhiteSpace(value) && Directory.Exists(value))
+            {
+                return (value, SdkRootSource.EnvironmentVariable);
+            }
+        }
+
+        var fallback = DefaultSdkRoot();
+        return Directory.Exists(fallback)
+            ? (fallback, SdkRootSource.DefaultFallback)
+            : (null, SdkRootSource.NotFound);
     }
 
     private string ResolveTool(string relativeDirectory, string executable)
     {
-        if (SdkRoot is null)
-        {
-            // No SDK root: rely on the tool being discoverable on PATH.
-            return executable;
-        }
+        var sdkRoot = SdkRoot;
 
-        return Path.Combine(SdkRoot, relativeDirectory, executable);
+        // No SDK root: rely on the tool being discoverable on PATH.
+        return sdkRoot is null ? executable : Path.Combine(sdkRoot, relativeDirectory, executable);
     }
 
     private static string Script(string name) => OperatingSystem.IsWindows() ? $"{name}.bat" : name;

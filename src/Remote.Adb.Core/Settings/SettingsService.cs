@@ -15,6 +15,12 @@ public sealed class SettingsService : ISettingsService
         _model = _store.Load();
     }
 
+    public string? AvdHome
+    {
+        get => _model.AvdHome;
+        set => SetOverride(_model.AvdHome, value, normalized => _model.AvdHome = normalized);
+    }
+
     public AppDensity Density
     {
         get => _model.Density;
@@ -30,6 +36,18 @@ public sealed class SettingsService : ISettingsService
         }
     }
 
+    public string? JavaHome
+    {
+        get => _model.JavaHome;
+        set => SetOverride(_model.JavaHome, value, normalized => _model.JavaHome = normalized);
+    }
+
+    public string? SdkRoot
+    {
+        get => _model.SdkRoot;
+        set => SetOverride(_model.SdkRoot, value, normalized => _model.SdkRoot = normalized);
+    }
+
     public AppTheme Theme
     {
         get => _model.Theme;
@@ -43,5 +61,20 @@ public sealed class SettingsService : ISettingsService
             _model.Theme = value;
             _store.Save(_model);
         }
+    }
+
+    // A blank or whitespace path means "no override" — store it as null so it round-trips as absent.
+    private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private void SetOverride(string? current, string? value, Action<string?> assign)
+    {
+        var normalized = Normalize(value);
+        if (current == normalized)
+        {
+            return;
+        }
+
+        assign(normalized);
+        _store.Save(_model);
     }
 }

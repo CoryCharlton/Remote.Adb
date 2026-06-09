@@ -32,8 +32,8 @@ public class EmulatorServiceTests
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
-                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-                .Returns((string _, IReadOnlyList<string> arguments, string? _, CancellationToken _) =>
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
+                .Returns((string _, IReadOnlyList<string> arguments, string? _, IReadOnlyDictionary<string, string>? _, CancellationToken _) =>
                 {
                     if (arguments.Contains("-list-avds"))
                     {
@@ -72,8 +72,8 @@ public class EmulatorServiceTests
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
-                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
-                .Returns((string _, IReadOnlyList<string> arguments, string? _, CancellationToken _) =>
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
+                .Returns((string _, IReadOnlyList<string> arguments, string? _, IReadOnlyDictionary<string, string>? _, CancellationToken _) =>
                 {
                     if (arguments.Contains("-list-avds"))
                     {
@@ -126,7 +126,7 @@ public class EmulatorServiceTests
         {
             var processRunner = new Mock<IProcessRunner>();
             processRunner
-                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .Setup(r => r.RunAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ProcessResult(0, string.Empty, string.Empty));
 
             var service = CreateService(processRunner);
@@ -134,7 +134,7 @@ public class EmulatorServiceTests
             await service.StopAsync("emulator-5554");
 
             processRunner.Verify(
-                r => r.RunAsync(AdbPath, It.Is<IReadOnlyList<string>>(arguments => arguments.SequenceEqual(new[] { "-s", "emulator-5554", "emu", "kill" })), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+                r => r.RunAsync(AdbPath, It.Is<IReadOnlyList<string>>(arguments => arguments.SequenceEqual(new[] { "-s", "emulator-5554", "emu", "kill" })), It.IsAny<string?>(), It.IsAny<IReadOnlyDictionary<string, string>?>(), It.IsAny<CancellationToken>()),
                 Times.Once);
         }
     }
