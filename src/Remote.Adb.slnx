@@ -6,17 +6,9 @@
     <File Path="../docs/ROADMAP.md" />
   </Folder>
   <Folder Name="/docs/tasks/">
-    <File Path="../docs/tasks/0001-restructure.md" />
-    <File Path="../docs/tasks/0002-emulator-management.md" />
-    <File Path="../docs/tasks/0003-emulator-friendly-names.md" />
-    <File Path="../docs/tasks/0004-design-system-theme.md" />
-    <File Path="../docs/tasks/0005-feature-first-restructure.md" />
-    <File Path="../docs/tasks/0006-emulator-view-details.md" />
-    <File Path="../docs/tasks/0007-emulator-edit-details.md" />
-    <File Path="../docs/tasks/0008-emulator-create.md" />
-    <File Path="../docs/tasks/0009-sdk-manager.md" />
-    <File Path="../docs/tasks/0010-settings-sdk-overrides.md" />
-    <File Path="../docs/tasks/0011-settings-persistence.md" />
+    <File Path="../docs/tasks/emulator-auto-refresh.md" />
+    <File Path="../docs/tasks/sdk-manager.md" />
+    <File Path="../docs/tasks/settings-sdk-overrides.md" />
   </Folder>
   <Folder Name="/eng/">
     <File Path="../.gitignore" />

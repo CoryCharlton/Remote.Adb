@@ -14,12 +14,12 @@ The app is .NET 10 / C# targeting `net10.0`. All functionality lives in a shared
 
 ## Roadmap & tasks
 
-Planning and live status live in `docs/`, not here — consult them before starting work or reporting status, and update them as milestones land:
+Planning lives in `docs/`, not here — consult it before starting work, and keep it current as milestones land. **`docs/` tracks future work only**: completed work is evidenced in git history and the code itself, so it is *not* archived here.
 
-- `docs/ROADMAP.md` — vision, the three pillars, and the milestone table (the source of truth for what's done / planned).
-- `docs/tasks/NNNN-*.md` — per-milestone task breakdowns with checklists and verification notes.
+- `docs/ROADMAP.md` — vision, the three pillars, and a milestone table of **planned** work in priority order (the source of truth for what's next).
+- `docs/tasks/<name>.md` — per-milestone breakdowns with checklists and verification notes. Named by topic, **not numbered** (priority/order lives in the ROADMAP, which links to them).
 
-Keep these in sync with the code; where a task doc and the code disagree, the code wins and the doc needs reconciling.
+When a milestone lands, **delete its task doc and remove its ROADMAP row** — don't leave a ✅. Where a task doc and the code disagree, the code wins and the doc needs reconciling.
 
 ## Reference: the tunnel workflow being replaced
 
@@ -82,7 +82,7 @@ The desktop app follows Avalonia's **MVVM** conventions:
 
 ### Project organization — feature-first vertical slices
 
-Both `Remote.Adb.Desktop` and `Remote.Adb.Core` are organized **feature-first**: a feature's views, view models, and services live together in a feature folder (`Emulators/`, `Devices/`, `Tunnel/`, `Settings/`), with `Common/` for genuinely cross-feature pieces (base classes, process/SDK plumbing, reusable controls, converters) and Desktop's `Shell/` for the app frame + navigation. Namespaces follow folders; a piece used by exactly one feature lives *in* that feature, not in `Common/`. _(The original layer-first layout is being migrated under `docs/tasks/0005-feature-first-restructure.md`; until it lands, some files remain under `Views/`/`ViewModels/`/`Services/`.)_
+Both `Remote.Adb.Desktop` and `Remote.Adb.Core` are organized **feature-first**: a feature's views, view models, and services live together in a feature folder (`Emulators/`, `Devices/`, `Tunnel/`, `Settings/`), with `Common/` for genuinely cross-feature pieces (base classes, process/SDK plumbing, reusable controls, converters) and Desktop's `Shell/` for the app frame + navigation. Namespaces follow folders; a piece used by exactly one feature lives *in* that feature, not in `Common/`.
 
 **Decompose views into small, single-purpose `UserControl`s.** A page is a thin shell that composes smaller pieces (a list view, a row card, a reusable overlay, a detail pane) — never one giant XAML file. Extract a piece even if it isn't reused yet.
 

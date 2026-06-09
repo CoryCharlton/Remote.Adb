@@ -1,6 +1,4 @@
-# 0010 — Settings: SDK / JAVA_HOME overrides
-
-**Status:** ⬜ Planned
+# Settings: SDK / JAVA_HOME overrides
 
 Let the user override the environment-based tool resolution from the **Settings** page, so the app works when
 `ANDROID_HOME`/`JAVA_HOME` aren't set (or are wrong — e.g. a broken Android Studio JBR). The overrides take

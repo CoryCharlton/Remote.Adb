@@ -1,6 +1,4 @@
-# 0009 — SDK Manager UI
-
-**Status:** ⬜ Planned
+# SDK Manager UI
 
 A GUI over `sdkmanager` to list, **download/install**, and remove Android SDK packages — chiefly **system
 images**, so a user can create an emulator from an image they don't have yet. Today the create wizard
