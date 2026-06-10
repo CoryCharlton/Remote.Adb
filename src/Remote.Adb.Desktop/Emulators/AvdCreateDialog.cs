@@ -1,24 +1,17 @@
-using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
-using Remote.Adb.Desktop.Common.Notifications;
 
 namespace Remote.Adb.Desktop.Emulators;
 
 /// <inheritdoc />
 public sealed class AvdCreateDialog : IAvdCreateDialog
 {
-    private readonly INotificationService _notifications;
-    private readonly IAvdProvisioningService _provisioning;
-    private readonly IAvdConfigStore _store;
+    private readonly Func<CreateAvdViewModel> _viewModelFactory;
 
-    public AvdCreateDialog(IAvdProvisioningService provisioning, IAvdConfigStore store, INotificationService notifications)
+    public AvdCreateDialog(Func<CreateAvdViewModel> viewModelFactory)
     {
-        _provisioning = provisioning;
-        _store = store;
-        _notifications = notifications;
+        _viewModelFactory = viewModelFactory;
     }
 
     /// <inheritdoc />
-    public Task<bool> ShowAsync() =>
-        DialogHost.ShowAsync<CreateAvdWizardWindow>(new CreateAvdViewModel(_provisioning, _store, _notifications));
+    public Task<bool> ShowAsync() => DialogHost.ShowAsync<CreateAvdWizardWindow>(_viewModelFactory());
 }

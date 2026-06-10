@@ -21,7 +21,6 @@ ADB connections to a remote development server. It replaces the workflows curren
 
 | Milestone | Notes |
 |-----------|-------|
-| **Settings — SDK / JAVA_HOME overrides** | [tasks/settings-sdk-overrides.md](tasks/settings-sdk-overrides.md) — override the env-var-based tool resolution (SDK path, AVD home, Java home) from Settings, so the app works without (or despite) `ANDROID_HOME`/`JAVA_HOME`. |
 | **SDK Manager UI** (list / download / remove system images & packages via `sdkmanager`) | [tasks/sdk-manager.md](tasks/sdk-manager.md); unblocks creating from a not-yet-installed image. |
 | **Emulator list auto-refresh** | [tasks/emulator-auto-refresh.md](tasks/emulator-auto-refresh.md); periodically re-list while the page is active so external start/stop/create shows up without a manual refresh. |
 | **DI lifetimes / stop manual construction** | [tasks/di-lifetimes.md](tasks/di-lifetimes.md); scope view models to their owning window/view and resolve currently-`new`'d dialog windows/VMs from DI. |

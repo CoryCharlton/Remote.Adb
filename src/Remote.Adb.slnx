@@ -10,7 +10,6 @@
     <File Path="../docs/tasks/di-lifetimes.md" />
     <File Path="../docs/tasks/emulator-auto-refresh.md" />
     <File Path="../docs/tasks/sdk-manager.md" />
-    <File Path="../docs/tasks/settings-sdk-overrides.md" />
   </Folder>
   <Folder Name="/eng/">
     <File Path="../.gitignore" />

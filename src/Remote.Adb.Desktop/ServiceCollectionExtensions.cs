@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Remote.Adb.Core;
+using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
 using Remote.Adb.Desktop.Common.Notifications;
 using Remote.Adb.Desktop.Devices;
@@ -27,6 +28,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAvdCreateDialog, AvdCreateDialog>();
         services.AddSingleton<NotificationService>();
         services.AddSingleton<INotificationService>(provider => provider.GetRequiredService<NotificationService>());
+
+        // A fresh details VM per row, with its store resolved from DI and the configuration/back callback passed in.
+        services.AddSingleton<EmulatorDetailsViewModelFactory>(provider =>
+            (configuration, back) => new EmulatorDetailsViewModel(configuration, provider.GetRequiredService<IAvdConfigStore>(), back));
+
+        // A fresh wizard VM per dialog open (the dialog service is a singleton, so it cannot capture a transient).
+        services.AddTransient<CreateAvdViewModel>();
+        services.AddTransient<Func<CreateAvdViewModel>>(provider => () => provider.GetRequiredService<CreateAvdViewModel>());
 
         services.AddHostedService<DeviceCatalogWarmup>();
 

@@ -18,6 +18,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     private readonly IAvdConfigStore _configStore;
     private readonly IConfirmDialog _confirmDialog;
     private readonly IAvdCreateDialog _createDialog;
+    private readonly EmulatorDetailsViewModelFactory _detailsFactory;
     private readonly IEmulatorService _emulatorService;
     private readonly INotificationService _notifications;
     private readonly IAvdProvisioningService _provisioning;
@@ -35,6 +36,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         IEmulatorService emulatorService,
         IAvdConfigStore configStore,
         IAvdCreateDialog createDialog,
+        EmulatorDetailsViewModelFactory detailsFactory,
         IAvdProvisioningService provisioning,
         IConfirmDialog confirmDialog,
         INotificationService notifications)
@@ -42,6 +44,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         _emulatorService = emulatorService;
         _configStore = configStore;
         _createDialog = createDialog;
+        _detailsFactory = detailsFactory;
         _provisioning = provisioning;
         _confirmDialog = confirmDialog;
         _notifications = notifications;
@@ -242,7 +245,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
             return;
         }
 
-        SelectedDetail = new EmulatorDetailsViewModel(configuration, _configStore, () => SelectedDetail = null);
+        SelectedDetail = _detailsFactory(configuration, () => SelectedDetail = null);
     }
 
     // Polls adb until the just-launched AVD registers as running (flipping its row out of the

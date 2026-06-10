@@ -7,6 +7,7 @@ namespace Remote.Adb.Desktop.Shell;
 public partial class MainWindow : Window
 {
     private readonly NotificationService? _notificationService;
+    private bool _diagnosticsRaised;
     private bool _sinkAttached;
 
     public MainWindow()
@@ -31,6 +32,12 @@ public partial class MainWindow : Window
 
         _sinkAttached = true;
         _notificationService.SetNotificationManager(NotificationManager);
+
+        if (!_diagnosticsRaised)
+        {
+            _diagnosticsRaised = true;
+            (DataContext as MainWindowViewModel)?.RaiseStartupDiagnostics();
+        }
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)

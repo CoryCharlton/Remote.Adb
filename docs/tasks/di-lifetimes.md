@@ -1,46 +1,39 @@
-# DI: own view-model lifetimes and stop manual construction
+# DI: view-scoped lifetimes and DI-resolved dialog windows
 
-Several types are constructed by hand instead of resolved from DI, and the page view models are app-lifetime
-transients held by the shell rather than scoped to the window/view that owns them. Do this as one focused pass
-rather than piecemeal.
+Deferred until there's a concrete driver. For a single-window app whose `MainWindow` lives the whole process,
+scoping view models to the window and DI-resolving the dialog windows is a **no-op today** — the page VMs already
+live as long as the app, and disposal-on-close would fire at shutdown. Don't build speculative infrastructure for it.
 
-## View-model lifetimes (the main item)
+## Trigger — do this when any of these becomes true
 
-The page view models (Emulator / Devices / Tunnel / Settings) are registered `AddTransient` but are constructed
-once by `MainWindowViewModel` and held in its `Destinations` for the whole app run — so they behave like
-singletons tied to the shell. Scope each VM to the window/view that owns it (e.g. a per-window DI scope), so a
-view model's lifetime matches its view and it can be recreated/disposed with the view rather than living forever.
+- A **second or recreatable window** exists (so a VM's lifetime should end with its window, not the app).
+- **Navigation recreates page VMs per visit** (page-level scoping), so disposing them on leave actually matters.
+- A **dialog window grows an injected dependency**, making the `new TWindow()` bypass of DI a real problem.
 
-## Stop manual construction (from the DI review pass)
+## Deferred work
 
-- **`CreateAvdViewModel`** — its ctor takes only services, yet `AvdCreateDialog` `new`s it while injecting
-  `_provisioning`/`_store` purely to forward them. Register `AddTransient<CreateAvdViewModel>()` and inject a
-  `Func<CreateAvdViewModel>` into `AvdCreateDialog` (so a fresh VM per dialog), dropping the forwarded services.
-- **Dialog windows** — `DialogHost.ShowAsync<TWindow>` uses a `where TWindow : Window, new()` constraint and
-  `new TWindow()`, so `ConfirmDialogWindow` / `CreateAvdWizardWindow` bypass DI and the source-generated
-  ViewLocator (unlike the four page views). Resolve `TWindow` from `IServiceProvider`, register the windows, and
-  drop the `new()` constraint — consistent with the page views and future-proof if a dialog needs a dependency.
-- **`EmulatorDetailsViewModel`** — mixes a service (`IAvdConfigStore`) with runtime args (an `AvdConfiguration`
-  and a back callback). Use a registered factory delegate so the service is DI-resolved and the runtime args stay
-  explicit, removing the service-forwarding through `EmulatorViewModel`.
-- **`ConfirmDialogViewModel`** (title/message/label) and **`EmulatorDeviceViewModel`** (device + command) take
-  only per-call runtime args — keep manual `new` (or a small factory); not pure DI candidates.
+- **`CCSWE.Avalonia.DependencyInjection` library** (own repo, modeled on `ccswe-avalonia-hosting`, referenced via
+  cross-repo `ProjectReference` until published): a base package with an `AddFactory<T>()` `IServiceCollection`
+  helper (MEDI has no built-in `Func<T>`), and a `.Desktop` package with a **view-level scope** primitive —
+  `CreateScopedWindow<TWindow>(this IServiceProvider)` that resolves a window (and its VM graph) from a child
+  `IServiceScope` and disposes the scope on `Closed`. Window granularity is the common case; the same primitive
+  applies to a page `UserControl` for per-visit scoping later.
+- **Scope the page VMs** (Emulator / Devices / Tunnel / Settings) and `MainWindowViewModel` to the shell window's
+  scope (`AddScoped`), resolved via `CreateScopedWindow<MainWindow>()` in `App`, so they dispose with the window.
+- **DI-resolve dialog windows**: drop `DialogHost.ShowAsync<TWindow>`'s `where TWindow : Window, new()` constraint
+  and resolve `ConfirmDialogWindow` / `CreateAvdWizardWindow` from DI (a child scope), consistent with the page
+  views and future-proof if a dialog needs a dependency.
 
-## Related lifetime smells (same pass)
+## Already done (in-app, no library)
 
-- `MainWindow` and `MainWindowViewModel` are `AddTransient` but are the single app root, resolved once in
-  `App.OnFrameworkInitializationCompleted`. Transient is semantically wrong for a one-instance root and offers no
-  guard against an accidental second resolution (which would re-run the diagnostics and build a second
-  notification manager). Consider singleton, or resolve-once-and-store.
-- `MainWindowViewModel` raises the startup diagnostics as a **constructor side effect** (`NotifyToolDiagnostics`),
-  so correctness depends on the implicit ordering "VM constructed before the window opens and attaches the
-  notification sink." Move that out of the ctor (e.g. an explicit `OnLoaded`/startup hook the window calls) so it
-  isn't a surprising side effect during DI graph construction and is unit-testable without firing toasts.
+- `CreateAvdViewModel` and `EmulatorDetailsViewModel` are created via registered factories (`Func<CreateAvdViewModel>`,
+  `EmulatorDetailsViewModelFactory`) instead of hand-`new`ed with forwarded services.
+- `MainWindowViewModel` no longer fires the startup diagnostics as a constructor side effect — the shell calls
+  `RaiseStartupDiagnostics()` from `MainWindow.OnLoaded` once its notification sink is attached.
 
 ## Notes
 
-- Microsoft.Extensions.DependencyInjection has no built-in `Func<T>` — register the factory delegates explicitly
+- Microsoft.Extensions.DependencyInjection has no built-in `Func<T>` — register factory delegates explicitly
   (`AddTransient<Func<T>>(sp => () => sp.GetRequiredService<T>())`) or inject `IServiceProvider` /
   `IServiceScopeFactory` for per-instance creation.
-- `MainWindow` is already DI-registered (`AddTransient<MainWindow>()`); this pass extends the same treatment to
-  the dialog windows and the manually-built view models.
+- `EmulatorDeviceViewModel` and `ConfirmDialogViewModel` take only per-call runtime args — keep manual `new`.
