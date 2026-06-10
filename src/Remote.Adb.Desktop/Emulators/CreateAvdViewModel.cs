@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Remote.Adb.Core.Common;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
+using Remote.Adb.Desktop.Common.Notifications;
 
 namespace Remote.Adb.Desktop.Emulators;
 
@@ -30,6 +31,7 @@ public partial class CreateAvdViewModel : ViewModelBase, IDialogViewModel
 
     private const string AllServices = "All services";
 
+    private readonly INotificationService _notifications;
     private readonly IAvdProvisioningService _provisioning;
     private readonly IAvdConfigStore _store;
     private readonly IReadOnlyList<AvdField> _tunableFields;
@@ -92,13 +94,14 @@ public partial class CreateAvdViewModel : ViewModelBase, IDialogViewModel
     [ObservableProperty]
     private string? _statusMessage;
 
-    public CreateAvdViewModel(IAvdProvisioningService provisioning, IAvdConfigStore store)
+    public CreateAvdViewModel(IAvdProvisioningService provisioning, IAvdConfigStore store, INotificationService notifications)
     {
         _provisioning = provisioning;
         _store = store;
+        _notifications = notifications;
 
         // The wizard's settings step is always editable, built from a blank config so every tunable shows.
-        var built = AvdDetailFields.BuildTunable(new AvdConfiguration(IniParser.Parse(string.Empty), null));
+        var built = AvdDetailFields.BuildTunable(new AvdConfiguration(string.Empty, IniParser.Parse(string.Empty), null));
         Groups = built.Groups;
         _tunableFields = built.Fields;
 
@@ -217,13 +220,15 @@ public partial class CreateAvdViewModel : ViewModelBase, IDialogViewModel
             }
 
             // The display name and tunable overrides are persisted by the store; a null result means the
-            // just-created AVD couldn't be located to write them. The create still succeeded, so surface the
-            // partial failure rather than silently reporting success and dropping the user's settings.
+            // just-created AVD couldn't be located to write them. The create still succeeded, so close (the list
+            // refreshes) and surface a persistent error rather than dropping the user's settings silently.
             if (_store.Write(_createdAvdId, BuildOverrides(_createdAvdId)) is null)
             {
-                StatusMessage = "The emulator was created, but its name and settings couldn't be saved. "
-                    + "It will appear with default settings — edit it from the list, or click Finish to retry.";
-                return;
+                _notifications.Show(
+                    "Emulator created",
+                    $"'{_createdAvdId}' was created, but its name and settings couldn't be saved. It appears with default settings — edit it from the list.",
+                    NotificationSeverity.Error,
+                    TimeSpan.Zero);
             }
 
             CloseRequested?.Invoke(true);

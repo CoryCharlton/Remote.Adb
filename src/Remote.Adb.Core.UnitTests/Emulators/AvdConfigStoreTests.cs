@@ -116,6 +116,19 @@ public class AvdConfigStoreTests
         }
 
         [Test]
+        public void It_locates_an_avd_by_folder_name_when_config_has_no_AvdId_key()
+        {
+            WriteAvd("Testing", "hw.ramSize=2048\n");
+
+            var result = CreateStore().Write("Testing",
+                new Dictionary<string, string> { ["hw.ramSize"] = "4096" });
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result!.AvdId, Is.EqualTo("Testing"));
+            Assert.That(result.RamSize, Is.EqualTo("4096"));
+        }
+
+        [Test]
         public void It_returns_null_for_an_unknown_avd()
         {
             WriteAvd("Pixel_6", "AvdId=Pixel_6\n");

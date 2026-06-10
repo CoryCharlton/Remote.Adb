@@ -118,6 +118,16 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
                 Emulators.RemoveAt(i);
             }
         }
+
+        var ordered = Emulators.OrderBy(emulator => emulator.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
+        for (var target = 0; target < ordered.Count; target++)
+        {
+            var current = Emulators.IndexOf(ordered[target]);
+            if (current != target)
+            {
+                Emulators.Move(current, target);
+            }
+        }
     }
 
     /// <summary>Loads the emulator list the first time the page is selected.</summary>

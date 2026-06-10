@@ -9,8 +9,9 @@ namespace Remote.Adb.Core.Emulators;
 /// </summary>
 public sealed class AvdConfiguration
 {
-    public AvdConfiguration(IniDocument config, IniDocument? sibling)
+    public AvdConfiguration(string avdId, IniDocument config, IniDocument? sibling)
     {
+        AvdId = avdId;
         Config = config;
         Sibling = sibling;
     }
@@ -24,8 +25,10 @@ public sealed class AvdConfiguration
     /// <summary><c>hw.audioInput</c>.</summary>
     public string? AudioInput => Config.Get("hw.audioInput");
 
-    /// <summary><c>AvdId</c> — the id reported by <c>emulator -list-avds</c>.</summary>
-    public string AvdId => Config.Get("AvdId") ?? string.Empty;
+    /// <summary>The AVD id — the <c>.avd</c> folder name, as reported by <c>emulator -list-avds</c>. The
+    /// <c>config.ini</c> <c>AvdId</c> key is unreliable (<c>avdmanager create</c> doesn't write it), so identity
+    /// comes from the folder.</summary>
+    public string AvdId { get; }
 
     /// <summary><c>hw.camera.back</c>.</summary>
     public string? BackCamera => Config.Get("hw.camera.back");

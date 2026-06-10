@@ -39,11 +39,13 @@ public sealed class AvdConfigStore : IAvdConfigStore
             {
                 var config = IniParser.Parse(File.ReadAllText(configPath));
 
-                // The sibling metadata file (path=/target=) is named after the .avd folder.
-                var siblingPath = Path.Combine(avdHome, Path.GetFileNameWithoutExtension(avdDirectory) + ".ini");
+                // The .avd folder name is the canonical AVD id; the sibling metadata file (path=/target=) and
+                // the .ini are named after it.
+                var avdId = Path.GetFileNameWithoutExtension(avdDirectory);
+                var siblingPath = Path.Combine(avdHome, avdId + ".ini");
                 var sibling = File.Exists(siblingPath) ? IniParser.Parse(File.ReadAllText(siblingPath)) : null;
 
-                located = new Located(configPath, new AvdConfiguration(config, sibling));
+                located = new Located(configPath, new AvdConfiguration(avdId, config, sibling));
             }
             catch (IOException exception)
             {
@@ -58,7 +60,7 @@ public sealed class AvdConfigStore : IAvdConfigStore
         }
     }
 
-    // Finds the AVD whose config.ini declares the given AvdId (the .avd folder name need not match it).
+    // Finds the AVD by its canonical id (the .avd folder name).
     private Located? Locate(string avdId)
     {
         foreach (var located in EnumerateAll())
@@ -114,7 +116,7 @@ public sealed class AvdConfigStore : IAvdConfigStore
             // Return the freshly written state directly rather than re-reading. A re-read would re-scan the
             // AVD home and could spuriously fail (a concurrent rename/delete), reporting a successful write as
             // a failure; the sibling .ini isn't touched by this write, so reuse it as-is.
-            return new AvdConfiguration(IniParser.Parse(text), located.Configuration.Sibling);
+            return new AvdConfiguration(avdId, IniParser.Parse(text), located.Configuration.Sibling);
         }
         catch (IOException exception)
         {
