@@ -22,12 +22,14 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     private bool _hasLoaded;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsListEmpty))]
     private bool _isBusy;
 
     [ObservableProperty]
     private EmulatorDetailsViewModel? _selectedDetail;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsListEmpty))]
     private string? _statusMessage;
 
     public EmulatorViewModel(
@@ -42,9 +44,15 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         _createDialog = createDialog;
         _provisioning = provisioning;
         _confirmDialog = confirmDialog;
+
+        Emulators.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsListEmpty));
     }
 
     public ObservableCollection<EmulatorDeviceViewModel> Emulators { get; } = [];
+
+    // The full-page empty state shows only once a load has settled with nothing to show (not while busy, and not
+    // masking a load error).
+    public bool IsListEmpty => !IsBusy && string.IsNullOrEmpty(StatusMessage) && Emulators.Count == 0;
 
     // Opens the create wizard; if an AVD was created, refresh so it shows up in the list.
     [RelayCommand]

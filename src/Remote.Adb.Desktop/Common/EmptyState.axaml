@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Remote.Adb.Desktop.Common.EmptyState"
+             x:Name="Root">
+
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="360">
+        <PathIcon Data="{Binding #Root.IconData}" Width="48" Height="48"
+                  HorizontalAlignment="Center" Foreground="{DynamicResource OnSurfaceVariant}"
+                  IsVisible="{Binding #Root.IconData, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+        <TextBlock Classes="HeadlineSmall" Text="{Binding #Root.Title}"
+                   HorizontalAlignment="Center" Foreground="{DynamicResource OnSurfaceStrong}"/>
+        <TextBlock Classes="BodyMedium" Text="{Binding #Root.Description}"
+                   TextAlignment="Center" TextWrapping="Wrap"
+                   Foreground="{DynamicResource OnSurfaceVariant}"/>
+    </StackPanel>
+
+</UserControl>

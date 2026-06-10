@@ -33,6 +33,11 @@
             </ScrollViewer>
         </Grid>
 
+        <common:EmptyState IsVisible="{Binding IsListEmpty}"
+                           IconData="{StaticResource IconAndroidLogo}"
+                           Title="No emulators yet"
+                           Description="Create an Android Virtual Device to get started — use the + button below."/>
+
         <!-- Error status, bottom-left; left/bottom match the page inset, right clears the button. -->
         <TextBlock VerticalAlignment="Bottom" Margin="24,0,88,24" TextWrapping="Wrap"
                    Classes="BodySmall" Foreground="{DynamicResource Error}"

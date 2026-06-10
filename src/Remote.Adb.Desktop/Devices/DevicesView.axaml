@@ -1,20 +1,14 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Remote.Adb.Desktop.Devices"
+             xmlns:common="using:Remote.Adb.Desktop.Common"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
              x:Class="Remote.Adb.Desktop.Devices.DevicesView"
              x:DataType="vm:DevicesViewModel">
 
-    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" MaxWidth="360">
-        <PathIcon Data="{StaticResource IconDeviceMobile}" Width="48" Height="48"
-                  HorizontalAlignment="Center" Foreground="{DynamicResource OnSurfaceVariant}"/>
-        <TextBlock Classes="HeadlineSmall" Text="{Binding Title}"
-                   HorizontalAlignment="Center" Foreground="{DynamicResource OnSurfaceStrong}"/>
-        <TextBlock Classes="BodyMedium" Text="{Binding Description}"
-                   TextAlignment="Center" TextWrapping="Wrap"
-                   Foreground="{DynamicResource OnSurfaceVariant}"/>
-    </StackPanel>
+    <common:EmptyState IconData="{StaticResource IconDeviceMobile}"
+                       Title="{Binding Title}" Description="{Binding Description}"/>
 
 </UserControl>
