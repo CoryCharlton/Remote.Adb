@@ -12,6 +12,7 @@ namespace Remote.Adb.Desktop.Shell;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private IActivatable? _activeScreen;
     private readonly ISdkDiagnostics _diagnostics;
 
     [ObservableProperty]
@@ -23,6 +24,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentScreen))]
     private NavigationDestination? _selectedDestination;
+
+    private bool _windowActive = true;
 
     public MainWindowViewModel(
         EmulatorViewModel emulator,
@@ -60,14 +63,9 @@ public partial class MainWindowViewModel : ViewModelBase
         SelectedDestination = Destinations.First(destination => destination.Label == "Settings");
     }
 
-    // Let a screen run its activation logic (e.g. load its data) when it becomes selected.
-    // Fire-and-forget is fine: activation handlers surface their own errors to the screen.
     partial void OnSelectedDestinationChanged(NavigationDestination? value)
     {
-        if (value?.Screen is IActivatable activatable)
-        {
-            _ = activatable.OnActivatedAsync();
-        }
+        UpdateActiveScreen();
     }
 
     // Surface any unconfigured-tool diagnostics (SDK / JDK) as one persistent toast each; clicking opens Settings.
@@ -84,9 +82,37 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    // Driven by the window (focus / minimize); a screen is only live while the window is in front.
+    public void SetWindowActive(bool isActive)
+    {
+        if (_windowActive == isActive)
+        {
+            return;
+        }
+
+        _windowActive = isActive;
+        UpdateActiveScreen();
+    }
+
     [RelayCommand]
     private void ToggleRail()
     {
         IsRail = !IsRail;
+    }
+
+    // A screen is live when it is the selected destination and the window is in front. Deactivate the previously
+    // live screen and activate the new one whenever either input changes. Activation is fire-and-forget — handlers
+    // surface their own errors to the screen.
+    private void UpdateActiveScreen()
+    {
+        var desired = _windowActive ? SelectedDestination?.Screen as IActivatable : null;
+        if (ReferenceEquals(desired, _activeScreen))
+        {
+            return;
+        }
+
+        _activeScreen?.OnDeactivated();
+        _activeScreen = desired;
+        _ = desired?.OnActivatedAsync();
     }
 }

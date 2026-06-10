@@ -45,8 +45,6 @@
             <PathIcon Data="{StaticResource IconPlus}" Width="24" Height="24"/>
         </theme:FloatingActionButton>
 
-        <common:BusyOverlay IsVisible="{Binding IsBusy}"/>
-
     </Panel>
 
 </UserControl>

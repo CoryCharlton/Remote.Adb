@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Remote.Adb.Core.Common;
@@ -13,6 +14,10 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     // A launched AVD takes a while to register with adb. Poll for it to come up, and stop
     // waiting after the timeout so a row can't get stuck in the "starting" state forever.
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
+
+    // Background re-list cadence while the page is live, so external start/stop/create shows up without a manual
+    // refresh. Listing shells out to adb/emulator, so keep it modest.
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan StartTimeout = TimeSpan.FromMinutes(3);
 
     private readonly IAvdConfigStore _configStore;
@@ -22,12 +27,10 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     private readonly IEmulatorService _emulatorService;
     private readonly INotificationService _notifications;
     private readonly IAvdProvisioningService _provisioning;
+    private readonly DispatcherTimer _refreshTimer;
     private bool _hasLoaded;
+    private bool _isRefreshing;
     private bool _loadFailed;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsListEmpty))]
-    private bool _isBusy;
 
     [ObservableProperty]
     private EmulatorDetailsViewModel? _selectedDetail;
@@ -49,14 +52,18 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         _confirmDialog = confirmDialog;
         _notifications = notifications;
 
+        _refreshTimer = new DispatcherTimer { Interval = RefreshInterval };
+        _refreshTimer.Tick += OnRefreshTick;
+
         Emulators.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsListEmpty));
     }
 
     public ObservableCollection<EmulatorDeviceViewModel> Emulators { get; } = [];
 
-    // The full-page empty state shows only once a load has settled with nothing to show (not while busy, and not
-    // masking a load error).
-    public bool IsListEmpty => !IsBusy && !_loadFailed && Emulators.Count == 0;
+    // The full-page empty state shows only once the first load has settled with nothing to show (not before a load,
+    // and not masking a load error). Deliberately independent of the transient refresh flag so a background tick
+    // doesn't flash it off and on.
+    public bool IsListEmpty => _hasLoaded && !_loadFailed && Emulators.Count == 0;
 
     // Opens the create wizard; if an AVD was created, refresh so it shows up in the list.
     [RelayCommand]
@@ -146,27 +153,43 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     private void NotifyError(string title, string message) =>
         _notifications.Show(title, message, NotificationSeverity.Error);
 
-    /// <summary>Loads the emulator list the first time the page is selected.</summary>
+    /// <summary>Re-lists immediately (so the page is fresh on return/restore) and starts the background re-list
+    /// while the page is live.</summary>
     public async Task OnActivatedAsync()
     {
-        if (_hasLoaded)
-        {
-            return;
-        }
-
-        _hasLoaded = true;
+        _refreshTimer.Start();
         await RefreshAsync();
     }
 
-    [RelayCommand]
-    private async Task RefreshAsync()
+    /// <summary>Stops the background re-list when the page is no longer live (navigated away, unfocused, minimized).</summary>
+    public void OnDeactivated()
     {
-        if (IsBusy)
+        _refreshTimer.Stop();
+    }
+
+    // Background tick: re-list silently (no toast spam on a persistent failure), but don't fight an in-flight start
+    // poll, and let RefreshAsync's reentry guard skip a tick that would overlap a manual refresh.
+    private void OnRefreshTick(object? sender, EventArgs e)
+    {
+        if (Emulators.Any(emulator => emulator.IsStarting))
         {
             return;
         }
 
-        IsBusy = true;
+        _ = RefreshAsync(notifyOnError: false);
+    }
+
+    [RelayCommand]
+    private Task RefreshAsync() => RefreshAsync(notifyOnError: true);
+
+    private async Task RefreshAsync(bool notifyOnError)
+    {
+        if (_isRefreshing)
+        {
+            return;
+        }
+
+        _isRefreshing = true;
 
         try
         {
@@ -176,11 +199,16 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         catch (ProcessLaunchException exception)
         {
             _loadFailed = true;
-            NotifyError("Couldn't load emulators", exception.Message);
+            if (notifyOnError)
+            {
+                NotifyError("Couldn't load emulators", exception.Message);
+            }
         }
         finally
         {
-            IsBusy = false;
+            _isRefreshing = false;
+            _hasLoaded = true;
+            OnPropertyChanged(nameof(IsListEmpty));
         }
     }
 

@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Remote.Adb.Desktop.Common.Notifications;
@@ -9,6 +10,7 @@ public partial class MainWindow : Window
     private readonly NotificationService? _notificationService;
     private bool _diagnosticsRaised;
     private bool _sinkAttached;
+    private bool _windowFocused = true;
 
     public MainWindow()
     {
@@ -19,6 +21,9 @@ public partial class MainWindow : Window
     {
         DataContext = viewModel;
         _notificationService = notificationService;
+
+        Activated += OnWindowActivated;
+        Deactivated += OnWindowDeactivated;
     }
 
     protected override void OnLoaded(RoutedEventArgs e)
@@ -40,11 +45,42 @@ public partial class MainWindow : Window
         }
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == WindowStateProperty)
+        {
+            UpdateWindowActivity();
+        }
+    }
+
     protected override void OnUnloaded(RoutedEventArgs e)
     {
         _notificationService?.SetNotificationManager(null);
         _sinkAttached = false;
 
         base.OnUnloaded(e);
+    }
+
+    // Track focus from the events themselves rather than reading IsActive: when Activated fires on focus regain the
+    // IsActive property hasn't necessarily settled true yet, so reading it here would compute "inactive" and (with
+    // no later trigger, unlike restore's WindowState change) never resume.
+    private void OnWindowActivated(object? sender, EventArgs e)
+    {
+        _windowFocused = true;
+        UpdateWindowActivity();
+    }
+
+    private void OnWindowDeactivated(object? sender, EventArgs e)
+    {
+        _windowFocused = false;
+        UpdateWindowActivity();
+    }
+
+    private void UpdateWindowActivity()
+    {
+        var active = _windowFocused && WindowState != WindowState.Minimized;
+        (DataContext as MainWindowViewModel)?.SetWindowActive(active);
     }
 }

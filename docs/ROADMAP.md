@@ -21,10 +21,9 @@ ADB connections to a remote development server. It replaces the workflows curren
 
 | Milestone | Notes |
 |-----------|-------|
-| **SDK Manager UI** (list / download / remove system images & packages via `sdkmanager`) | [tasks/sdk-manager.md](tasks/sdk-manager.md); unblocks creating from a not-yet-installed image. |
-| **Emulator list auto-refresh** | [tasks/emulator-auto-refresh.md](tasks/emulator-auto-refresh.md); periodically re-list while the page is active so external start/stop/create shows up without a manual refresh. |
-| **DI lifetimes / stop manual construction** | [tasks/di-lifetimes.md](tasks/di-lifetimes.md); scope view models to their owning window/view and resolve currently-`new`'d dialog windows/VMs from DI. |
 | **Desktop UI tests (Avalonia headless)** | [tasks/desktop-ui-tests.md](tasks/desktop-ui-tests.md); add Remote.Adb.Desktop.UnitTests using Avalonia.Headless to cover view models and bindings. |
+| **SDK Manager UI** (list / download / remove system images & packages via `sdkmanager`) | [tasks/sdk-manager.md](tasks/sdk-manager.md); unblocks creating from a not-yet-installed image. |
+| **DI lifetimes / stop manual construction** | [tasks/di-lifetimes.md](tasks/di-lifetimes.md); deferred until a concrete driver — scope view models to their owning window/view and resolve currently-`new`'d dialog windows/VMs from DI. |
 | **SSH reverse tunnel** for the adb server | Pillar 1. |
 | **Remote device connection** over network | Pillar 3. |
 
