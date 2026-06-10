@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Remote.Adb.Core.Common;
 using Remote.Adb.Core.Emulators;
 
 namespace Remote.Adb.Desktop.Emulators;
@@ -12,6 +13,14 @@ namespace Remote.Adb.Desktop.Emulators;
 /// </summary>
 public partial class EmulatorDeviceViewModel : ObservableObject
 {
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private string? _abi;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private int? _apiLevel;
+
     [ObservableProperty]
     private string _displayName = string.Empty;
 
@@ -51,9 +60,21 @@ public partial class EmulatorDeviceViewModel : ObservableObject
     /// <summary>Show the stop affordance: running and not mid-launch.</summary>
     public bool ShowStop => IsRunning && !IsStarting;
 
+    /// <summary>The system image line under the name — e.g. "Android 16 (Baklava) · x86_64".</summary>
+    public string? Summary
+    {
+        get
+        {
+            var version = ApiLevel is { } api ? AndroidApiLevels.Label(api) : null;
+            return string.Join(" · ", new[] { version, Abi }.Where(part => !string.IsNullOrEmpty(part)));
+        }
+    }
+
     /// <summary>Applies the latest service snapshot to this row, preserving its identity.</summary>
     public void Update(AndroidVirtualDevice device)
     {
+        Abi = device.Abi;
+        ApiLevel = device.ApiLevel;
         DisplayName = device.DisplayName;
         Tag = device.Tag;
         Serial = device.Serial;

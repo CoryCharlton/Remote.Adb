@@ -1,3 +1,5 @@
+using Remote.Adb.Core.Common;
+
 namespace Remote.Adb.Core.Emulators;
 
 /// <summary>
@@ -25,9 +27,8 @@ public sealed class AvdConfiguration
     /// <summary><c>hw.audioInput</c>.</summary>
     public string? AudioInput => Config.Get("hw.audioInput");
 
-    /// <summary>The AVD id — the <c>.avd</c> folder name, as reported by <c>emulator -list-avds</c>. The
-    /// <c>config.ini</c> <c>AvdId</c> key is unreliable (<c>avdmanager create</c> doesn't write it), so identity
-    /// comes from the folder.</summary>
+    /// <summary>The AVD id as reported by <c>emulator -list-avds</c> — the <c>config.ini</c> <c>AvdId</c> when
+    /// present (Android Studio writes it), else the <c>.avd</c> folder name (<c>avdmanager create</c> doesn't).</summary>
     public string AvdId { get; }
 
     /// <summary><c>hw.camera.back</c>.</summary>
@@ -151,5 +152,5 @@ public sealed class AvdConfiguration
     }
 
     /// <summary>Projects the lightweight list metadata (<see cref="AvdMetadata"/>) from this configuration.</summary>
-    public AvdMetadata ToMetadata() => new(AvdId, DisplayName, Tag);
+    public AvdMetadata ToMetadata() => new(AvdId, DisplayName, Tag, ApiLevel, Abi);
 }

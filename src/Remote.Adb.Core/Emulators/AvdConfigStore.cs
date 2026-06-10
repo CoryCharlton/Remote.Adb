@@ -39,9 +39,12 @@ public sealed class AvdConfigStore : IAvdConfigStore
             {
                 var config = IniParser.Parse(File.ReadAllText(configPath));
 
-                // The .avd folder name is the canonical AVD id; the sibling metadata file (path=/target=) and
-                // the .ini are named after it.
-                var avdId = Path.GetFileNameWithoutExtension(avdDirectory);
+                // AVD id: prefer the config.ini AvdId (Android Studio writes it, and may name the .avd folder
+                // differently); fall back to the folder name (avdmanager doesn't write AvdId). Either way this is
+                // the id emulator -list-avds reports, and the sibling .ini is named after it.
+                var avdId = config.Get("AvdId") is { Length: > 0 } configAvdId
+                    ? configAvdId
+                    : Path.GetFileNameWithoutExtension(avdDirectory);
                 var siblingPath = Path.Combine(avdHome, avdId + ".ini");
                 var sibling = File.Exists(siblingPath) ? IniParser.Parse(File.ReadAllText(siblingPath)) : null;
 
@@ -60,7 +63,7 @@ public sealed class AvdConfigStore : IAvdConfigStore
         }
     }
 
-    // Finds the AVD by its canonical id (the .avd folder name).
+    // Finds the AVD by its canonical id (config AvdId, else the .avd folder name).
     private Located? Locate(string avdId)
     {
         foreach (var located in EnumerateAll())

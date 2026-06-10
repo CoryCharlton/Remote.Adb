@@ -38,12 +38,6 @@
                            Title="No emulators yet"
                            Description="Create an Android Virtual Device to get started — use the + button below."/>
 
-        <!-- Error status, bottom-left; left/bottom match the page inset, right clears the button. -->
-        <TextBlock VerticalAlignment="Bottom" Margin="24,0,88,24" TextWrapping="Wrap"
-                   Classes="BodySmall" Foreground="{DynamicResource Error}"
-                   IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                   Text="{Binding StatusMessage}"/>
-
         <!-- Primary action: create a new AVD. Inset to align with the card edge. -->
         <theme:FloatingActionButton HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                     Margin="0,0,24,24" ToolTip.Tip="Create AVD"

@@ -116,6 +116,18 @@ public class AvdConfigStoreTests
         }
 
         [Test]
+        public void It_locates_an_avd_by_its_config_AvdId_when_the_folder_name_differs()
+        {
+            // Android Studio writes AvdId to config.ini and may name the .avd folder differently.
+            WriteAvd("some_folder", "AvdId=Television_1080p_8.0\nhw.ramSize=2048\n");
+
+            var result = CreateStore().Read("Television_1080p_8.0");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result!.AvdId, Is.EqualTo("Television_1080p_8.0"));
+        }
+
+        [Test]
         public void It_locates_an_avd_by_folder_name_when_config_has_no_AvdId_key()
         {
             WriteAvd("Testing", "hw.ramSize=2048\n");

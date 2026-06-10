@@ -24,11 +24,9 @@
                 <TextBlock Text="{Binding DisplayName}" Classes="TitleMedium"
                            Foreground="{DynamicResource OnSurface}"/>
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="{Binding Name}" Classes="BodySmall"
-                               Foreground="{DynamicResource OnSurfaceVariant}"/>
-                    <TextBlock Text="{Binding Tag}" Classes="BodySmall"
+                    <TextBlock Text="{Binding Summary}" Classes="BodySmall"
                                Foreground="{DynamicResource OnSurfaceVariant}"
-                               IsVisible="{Binding Tag, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                               IsVisible="{Binding Summary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     <TextBlock Text="{Binding Serial}" Classes="BodySmall"
                                Foreground="{DynamicResource OnSurfaceVariant}"
                                IsVisible="{Binding Serial, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

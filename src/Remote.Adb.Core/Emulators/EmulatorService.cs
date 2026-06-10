@@ -25,7 +25,7 @@ public sealed class EmulatorService : IEmulatorService
     {
         catalog.TryGetValue(name, out var metadata);
         var displayName = metadata?.DisplayName ?? name;
-        return new AndroidVirtualDevice(name, displayName, metadata?.Tag, isRunning, serial);
+        return new AndroidVirtualDevice(name, displayName, metadata?.Tag, isRunning, serial, metadata?.ApiLevel, metadata?.Abi);
     }
 
     private async Task<string?> GetAvdNameAsync(string serial, CancellationToken cancellationToken)

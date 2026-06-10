@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Remote.Adb.Core.Common;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
+using Remote.Adb.Desktop.Common.Notifications;
 
 namespace Remote.Adb.Desktop.Emulators;
 
@@ -18,8 +19,10 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     private readonly IConfirmDialog _confirmDialog;
     private readonly IAvdCreateDialog _createDialog;
     private readonly IEmulatorService _emulatorService;
+    private readonly INotificationService _notifications;
     private readonly IAvdProvisioningService _provisioning;
     private bool _hasLoaded;
+    private bool _loadFailed;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsListEmpty))]
@@ -28,22 +31,20 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     [ObservableProperty]
     private EmulatorDetailsViewModel? _selectedDetail;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsListEmpty))]
-    private string? _statusMessage;
-
     public EmulatorViewModel(
         IEmulatorService emulatorService,
         IAvdConfigStore configStore,
         IAvdCreateDialog createDialog,
         IAvdProvisioningService provisioning,
-        IConfirmDialog confirmDialog)
+        IConfirmDialog confirmDialog,
+        INotificationService notifications)
     {
         _emulatorService = emulatorService;
         _configStore = configStore;
         _createDialog = createDialog;
         _provisioning = provisioning;
         _confirmDialog = confirmDialog;
+        _notifications = notifications;
 
         Emulators.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsListEmpty));
     }
@@ -52,7 +53,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
 
     // The full-page empty state shows only once a load has settled with nothing to show (not while busy, and not
     // masking a load error).
-    public bool IsListEmpty => !IsBusy && string.IsNullOrEmpty(StatusMessage) && Emulators.Count == 0;
+    public bool IsListEmpty => !IsBusy && !_loadFailed && Emulators.Count == 0;
 
     // Opens the create wizard; if an AVD was created, refresh so it shows up in the list.
     [RelayCommand]
@@ -88,7 +89,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         {
             if (!await _provisioning.DeleteAsync(device.Name))
             {
-                StatusMessage = $"Could not delete '{device.DisplayName}'.";
+                NotifyError("Delete failed", $"Could not delete '{device.DisplayName}'.");
                 return;
             }
 
@@ -97,7 +98,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         }
         catch (ProcessLaunchException exception)
         {
-            StatusMessage = exception.Message;
+            NotifyError("Delete failed", exception.Message);
         }
     }
 
@@ -138,6 +139,10 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         }
     }
 
+    // Transient failures surface as an auto-dismissing error toast (not a persistent inline label).
+    private void NotifyError(string title, string message) =>
+        _notifications.Show(title, message, NotificationSeverity.Error);
+
     /// <summary>Loads the emulator list the first time the page is selected.</summary>
     public async Task OnActivatedAsync()
     {
@@ -159,15 +164,16 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         }
 
         IsBusy = true;
-        StatusMessage = null;
 
         try
         {
             Merge(await _emulatorService.ListAsync());
+            _loadFailed = false;
         }
         catch (ProcessLaunchException exception)
         {
-            StatusMessage = exception.Message;
+            _loadFailed = true;
+            NotifyError("Couldn't load emulators", exception.Message);
         }
         finally
         {
@@ -184,7 +190,6 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         }
 
         device.IsStarting = true;
-        StatusMessage = null;
 
         try
         {
@@ -193,7 +198,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         }
         catch (ProcessLaunchException exception)
         {
-            StatusMessage = exception.Message;
+            NotifyError("Couldn't start emulator", exception.Message);
         }
         finally
         {
@@ -216,7 +221,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         }
         catch (ProcessLaunchException exception)
         {
-            StatusMessage = exception.Message;
+            NotifyError("Couldn't stop emulator", exception.Message);
         }
     }
 
@@ -233,7 +238,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         var configuration = _configStore.Read(device.Name);
         if (configuration is null)
         {
-            StatusMessage = $"No configuration found for {device.DisplayName}.";
+            NotifyError("Details unavailable", $"No configuration found for {device.DisplayName}.");
             return;
         }
 

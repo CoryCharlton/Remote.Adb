@@ -1,3 +1,5 @@
+using Remote.Adb.Core.Common;
+
 namespace Remote.Adb.Core.Emulators;
 
 /// <summary>
