@@ -1,11 +1,11 @@
 using System.Collections.ObjectModel;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Remote.Adb.Core.Common;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
 using Remote.Adb.Desktop.Common.Notifications;
+using Remote.Adb.Desktop.Common.Threading;
 
 namespace Remote.Adb.Desktop.Emulators;
 
@@ -27,7 +27,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     private readonly IEmulatorService _emulatorService;
     private readonly INotificationService _notifications;
     private readonly IAvdProvisioningService _provisioning;
-    private readonly DispatcherTimer _refreshTimer;
+    private readonly IDispatcherTimer _refreshTimer;
     private bool _hasLoaded;
     private bool _isRefreshing;
     private bool _loadFailed;
@@ -42,7 +42,8 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         EmulatorDetailsViewModelFactory detailsFactory,
         IAvdProvisioningService provisioning,
         IConfirmDialog confirmDialog,
-        INotificationService notifications)
+        INotificationService notifications,
+        ITimerFactory timerFactory)
     {
         _emulatorService = emulatorService;
         _configStore = configStore;
@@ -52,7 +53,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         _confirmDialog = confirmDialog;
         _notifications = notifications;
 
-        _refreshTimer = new DispatcherTimer { Interval = RefreshInterval };
+        _refreshTimer = timerFactory.Create(RefreshInterval);
         _refreshTimer.Tick += OnRefreshTick;
 
         Emulators.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsListEmpty));

@@ -36,7 +36,7 @@ public partial class MainWindow : Window
         }
 
         _sinkAttached = true;
-        _notificationService.SetNotificationManager(NotificationManager);
+        _notificationService.SetSink(new WindowNotificationManagerSink(NotificationManager));
 
         if (!_diagnosticsRaised)
         {
@@ -57,7 +57,7 @@ public partial class MainWindow : Window
 
     protected override void OnUnloaded(RoutedEventArgs e)
     {
-        _notificationService?.SetNotificationManager(null);
+        _notificationService?.SetSink(null);
         _sinkAttached = false;
 
         base.OnUnloaded(e);

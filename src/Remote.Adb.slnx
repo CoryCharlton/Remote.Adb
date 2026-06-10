@@ -6,7 +6,6 @@
     <File Path="../docs/ROADMAP.md" />
   </Folder>
   <Folder Name="/docs/tasks/">
-    <File Path="../docs/tasks/desktop-ui-tests.md" />
     <File Path="../docs/tasks/di-lifetimes.md" />
     <File Path="../docs/tasks/sdk-manager.md" />
   </Folder>
@@ -24,5 +23,6 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="Remote.Adb.Core.UnitTests/Remote.Adb.Core.UnitTests.csproj" />
+    <Project Path="Remote.Adb.Desktop.UnitTests/Remote.Adb.Desktop.UnitTests.csproj" />
   </Folder>
 </Solution>

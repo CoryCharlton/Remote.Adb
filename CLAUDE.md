@@ -80,6 +80,10 @@ The desktop app follows Avalonia's **MVVM** conventions:
 - `ViewModelBase` derives from CommunityToolkit.Mvvm's `ObservableObject`. Use the toolkit's source generators (`[ObservableProperty]`, `[RelayCommand]`) for bindable state and commands.
 - **Compiled bindings are on by default** (`AvaloniaUseCompiledBindingsByDefault=true`) — XAML bindings need a declared `x:DataType`, and binding errors surface at compile time.
 
+### View models and services stay UI-free
+
+A view model or service must **not** depend directly on an Avalonia UI control or threading primitive (`WindowNotificationManager`, `DispatcherTimer`, `TopLevel`, `Dispatcher`, …). Introduce a thin abstraction in the relevant `Common/` folder and a UI-side **adapter** that implements it; the adapter — not the consumer — owns the Avalonia type and any UI-thread marshaling. This keeps view models and services unit-testable with plain NUnit + Moq (no Avalonia.Headless harness). Examples: `ITimerFactory`/`IDispatcherTimer` wrap `DispatcherTimer` (`Common/Threading/`), and `INotificationSink` wraps `WindowNotificationManager` (`Common/Notifications/`).
+
 ### Project organization — feature-first vertical slices
 
 Both `Remote.Adb.Desktop` and `Remote.Adb.Core` are organized **feature-first**: a feature's views, view models, and services live together in a feature folder (`Emulators/`, `Devices/`, `Tunnel/`, `Settings/`), with `Common/` for genuinely cross-feature pieces (base classes, process/SDK plumbing, reusable controls, converters) and Desktop's `Shell/` for the app frame + navigation. Namespaces follow folders; a piece used by exactly one feature lives *in* that feature, not in `Common/`.

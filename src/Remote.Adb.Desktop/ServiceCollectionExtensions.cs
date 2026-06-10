@@ -3,6 +3,7 @@ using Remote.Adb.Core;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
 using Remote.Adb.Desktop.Common.Notifications;
+using Remote.Adb.Desktop.Common.Threading;
 using Remote.Adb.Desktop.Devices;
 using Remote.Adb.Desktop.Emulators;
 using Remote.Adb.Desktop.Settings;
@@ -24,6 +25,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IThemeApplier, ThemeApplier>();
         services.AddSingleton<IDensityApplier, DensityApplier>();
+        services.AddSingleton<ITimerFactory, DispatcherTimerFactory>();
         services.AddSingleton<IConfirmDialog, ConfirmDialog>();
         services.AddSingleton<IAvdCreateDialog, AvdCreateDialog>();
         services.AddSingleton<NotificationService>();
