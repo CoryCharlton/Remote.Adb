@@ -6,6 +6,7 @@
     <File Path="../docs/ROADMAP.md" />
   </Folder>
   <Folder Name="/docs/tasks/">
+    <File Path="../docs/tasks/desktop-ui-tests.md" />
     <File Path="../docs/tasks/di-lifetimes.md" />
     <File Path="../docs/tasks/emulator-auto-refresh.md" />
     <File Path="../docs/tasks/sdk-manager.md" />
