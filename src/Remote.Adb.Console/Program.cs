@@ -211,8 +211,8 @@ static async Task<int> HandleEmulatorAsync(string[] args, IEmulatorService emula
     }
 }
 
-// Opens the reverse tunnel and blocks until Ctrl+C (or the tunnel drops), mirroring adb-tunnel.bat's
-// "keep this window open" behavior. The host falls back to the saved setting when omitted.
+// Opens the reverse tunnel and blocks until Ctrl+C (or the tunnel drops) — keep the window open.
+// The host falls back to the saved setting when omitted.
 static async Task<int> HandleTunnelAsync(string[] args, ITunnelService tunnel, ISettingsService settings)
 {
     var host = args.Length > 0 ? args[0] : settings.TunnelHost;

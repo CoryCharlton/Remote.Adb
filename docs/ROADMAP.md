@@ -6,14 +6,14 @@ a milestone's task doc is deleted when the milestone lands. Order in the milesto
 ## Vision
 
 A single tool — desktop GUI and console, both over a shared `Remote.Adb.Core` library — to manage
-ADB connections to a remote development server. It replaces the workflows currently encoded in
-`src/adb-tunnel.bat` and related manual steps.
+ADB connections to a remote development server. It replaces the workflows previously encoded in
+manual scripts and steps.
 
 ## Pillars
 
 1. **SSH port forwarding** — open a reverse tunnel so a local `adb` server is reachable from the
-   remote dev host (`ssh -o ExitOnForwardFailure=yes -N -R 5037:127.0.0.1:5037 <host>`), with the
-   kill-then-bind-then-retry handling from `adb-tunnel.bat`.
+   remote dev host (`ssh -o ExitOnForwardFailure=yes -N -R 5037:127.0.0.1:5037 <host>`), with
+   kill-then-bind-then-retry handling for the IntelliJ adb-respawn race.
 2. **Emulator management** — list, start, stop, create, view/edit, and delete Android emulators.
 3. **Remote device connection** — connect to Android devices over the network (e.g. Wi-Fi).
 
@@ -29,8 +29,10 @@ ADB connections to a remote development server. It replaces the workflows curren
 
 - All domain logic lives in `Remote.Adb.Core`; the GUI and CLI are thin shells that resolve services
   from DI (`AddRemoteAdbCore()`). New capability lands in Core first, then is surfaced in both heads.
-- See `src/adb-tunnel.bat` and the "tunnel workflow being replaced" section of `CLAUDE.md` for the
-  hard-won SSH/adb details that must carry into Pillar 1.
+- Pillars 1 (SSH reverse tunnel) and 2 (emulator management) have landed; the Devices page lists
+  attached devices, leaving network *connect* (Pillar 3) as the open pillar. See the "SSH/adb
+  constraints the tunnel must preserve" section of `CLAUDE.md` for the hard-won SSH/adb details
+  the tunnel implementation preserves.
 - To debug the desktop UI (catch runtime layout/XAML bugs a clean build misses), drive it under WSLg
   with screenshots — see [wslg-gui-debugging.md](wslg-gui-debugging.md) and the reproducible data
   harness at [tools/setup-fake-avd-harness.sh](tools/setup-fake-avd-harness.sh).

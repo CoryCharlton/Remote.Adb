@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Project
 
-A cross-platform desktop app to manage ADB (Android Debug Bridge) connections to a remote development server. The end goal is to unify, in one GUI, the workflows currently scattered across scripts (notably `adb-tunnel.bat`):
+A cross-platform desktop app to manage ADB (Android Debug Bridge) connections to a remote development server. The end goal is to unify, in one GUI, the workflows previously scattered across manual scripts and steps:
 
 1. **SSH port forwarding** — open a reverse tunnel so a Windows-side `adb` server is reachable from the remote dev host (the remote's `adb` talks to `127.0.0.1:5037`, forwarded back to the local server).
 2. **Emulator management** — start, manage, and create Android emulators.
@@ -21,9 +21,9 @@ Planning lives in `docs/`, not here — consult it before starting work, and kee
 
 When a milestone lands, **delete its task doc and remove its ROADMAP row** — don't leave a ✅. Where a task doc and the code disagree, the code wins and the doc needs reconciling.
 
-## Reference: the tunnel workflow being replaced
+## Reference: SSH/adb constraints the tunnel must preserve
 
-`adb-tunnel.bat` is the battle-tested script this app is meant to supersede. It encodes hard-won knowledge that should carry over to the C# implementation:
+The reverse-tunnel workflow encodes hard-won knowledge the `TunnelService` implementation preserves:
 
 - The reverse tunnel is `ssh -o ExitOnForwardFailure=yes -N -R 5037:127.0.0.1:5037 <host>`. `ExitOnForwardFailure` turns a silent bind failure into a visible non-zero exit.
 - Kill the remote `adb` with `pkill -x adb`, **not** `adb kill-server` — `kill-server` does a localhost network round-trip that can hang on a stale/forwarded `127.0.0.1:5037`.
@@ -55,7 +55,7 @@ dotnet test src/Remote.Adb.slnx
 dotnet test src/Remote.Adb.slnx --filter "FullyQualifiedName~ClassName"
 ```
 
-The SDK is pinned to `10.0.0` (`rollForward: latestMinor`) via `src/global.json`. `src/Directory.Build.props` applies `LangVersion=preview`, `ImplicitUsings=enable`, and `Nullable=enable` solution-wide, and references JetBrains.Annotations and Nerdbank.GitVersioning (version derived from git history).
+The SDK is pinned to `10.0.0` (`rollForward: latestMinor`) via `src/global.json`. `src/Directory.Build.props` applies `LangVersion=default`, `ImplicitUsings=enable`, and `Nullable=enable` solution-wide, and references JetBrains.Annotations and Nerdbank.GitVersioning (version derived from git history).
 
 ## Package management
 
@@ -76,7 +76,7 @@ The desktop app follows Avalonia's **MVVM** conventions:
 
 - `Program.Main` builds a **.NET Generic Host** via `DesktopApplication.CreateBuilder<App>` (from the **CCSWE.Avalonia.Hosting** package), registers services, and runs it — the host owns DI and the classic desktop lifetime. `BuildAvaloniaApp()` mirrors the same Avalonia configuration (minus the host) for the XAML previewer; `WithDeveloperTools()` is added only in `DEBUG`. Fonts/type scale come from the CCSWE.Avalonia.Material theme, not a base theme.
 - `App.OnFrameworkInitializationCompleted` is the composition root — the host injects the service provider (`IServiceProviderAccessor`), then the app applies the persisted theme/density and resolves the main view model from DI.
-- **View resolution is source-generated** via the **CCSWE.Avalonia.ViewLocator** package: `ViewLocator` is an empty `[GenerateViewLocator(typeof(ViewModelBase))]` partial that the generator fills in at compile time, mapping each `XxxViewModel` to the `XxxView` in the **same namespace** (e.g. `EmulatorViewModel` → `EmulatorView` — so a VM and its view live together in one feature folder) and resolving the view from DI. View models must derive from `ViewModelBase` for the locator to match.
+- **View resolution is source-generated** via the **CCSWE.Avalonia.ViewLocator** package: `ViewLocator` is an empty `[GenerateViewLocator(typeof(ViewModelBase))]` partial that the generator fills in at compile time, mapping each `FooViewModel` to the `FooView` in the **same namespace** (e.g. `EmulatorViewModel` → `EmulatorView` — so a VM and its view live together in one feature folder) and resolving the view from DI. View models must derive from `ViewModelBase` for the locator to match.
 - `ViewModelBase` derives from CommunityToolkit.Mvvm's `ObservableObject`. Use the toolkit's source generators (`[ObservableProperty]`, `[RelayCommand]`) for bindable state and commands.
 - **Compiled bindings are on by default** (`AvaloniaUseCompiledBindingsByDefault=true`) — XAML bindings need a declared `x:DataType`, and binding errors surface at compile time.
 
@@ -90,7 +90,7 @@ Both `Remote.Adb.Desktop` and `Remote.Adb.Core` are organized **feature-first**:
 
 **Decompose views into small, single-purpose `UserControl`s.** A page is a thin shell that composes smaller pieces (a list view, a row card, a reusable overlay, a detail pane) — never one giant XAML file. Extract a piece even if it isn't reused yet.
 
-When adding a screen: create `XxxView.axaml` (+ `.axaml.cs`) and `XxxViewModel.cs` (deriving from `ViewModelBase`) in the relevant feature folder of `Remote.Adb.Desktop`, and register the view in DI; the source-generated `ViewLocator` wires them by name. Domain models and services belong in the matching feature folder of `Remote.Adb.Core`.
+When adding a screen: create `FooView.axaml` (+ `.axaml.cs`) and `FooViewModel.cs` (deriving from `ViewModelBase`) in the relevant feature folder of `Remote.Adb.Desktop`, and register the view in DI; the source-generated `ViewLocator` wires them by name. Domain models and services belong in the matching feature folder of `Remote.Adb.Core`.
 
 ### Scrollable views — inset the content, not the scroll container
 
