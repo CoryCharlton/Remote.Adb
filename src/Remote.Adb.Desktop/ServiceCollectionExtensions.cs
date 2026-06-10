@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IThemeApplier, ThemeApplier>();
         services.AddSingleton<IDensityApplier, DensityApplier>();
         services.AddSingleton<ITimerFactory, DispatcherTimerFactory>();
+        services.AddSingleton<IUiDispatcher, DispatcherUiDispatcher>();
         services.AddSingleton<IConfirmDialog, ConfirmDialog>();
         services.AddSingleton<IAvdCreateDialog, AvdCreateDialog>();
         services.AddSingleton<NotificationService>();
@@ -37,9 +38,10 @@ public static class ServiceCollectionExtensions
 
         // A fresh wizard VM per dialog open (the dialog service is a singleton, so it cannot capture a transient).
         services.AddTransient<CreateAvdViewModel>();
-        services.AddTransient<Func<CreateAvdViewModel>>(provider => () => provider.GetRequiredService<CreateAvdViewModel>());
+        services.AddTransient<Func<CreateAvdViewModel>>(provider => provider.GetRequiredService<CreateAvdViewModel>);
 
         services.AddHostedService<DeviceCatalogWarmup>();
+        services.AddHostedService<TunnelAutoConnect>();
 
         services.AddTransient<MainWindow>();
         services.AddTransient<MainWindowViewModel>();

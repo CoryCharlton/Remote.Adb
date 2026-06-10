@@ -1,11 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using Moq;
+using Remote.Adb.Core.Adb;
 using Remote.Adb.Core.Common;
 using Remote.Adb.Core.Diagnostics;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Core.Settings;
+using Remote.Adb.Core.Tunnel;
 using Remote.Adb.Desktop.Common;
 using Remote.Adb.Desktop.Common.Notifications;
+using Remote.Adb.Desktop.Common.Threading;
 using Remote.Adb.Desktop.Devices;
 using Remote.Adb.Desktop.Emulators;
 using Remote.Adb.Desktop.Settings;
@@ -55,10 +58,22 @@ public class MainWindowViewModelTests
             Mock.Of<IThemeApplier>(),
             Mock.Of<IDensityApplier>());
 
+        var devices = new DevicesViewModel(
+            Mock.Of<IDeviceService>(),
+            Notifications.Object,
+            new FakeTimerFactory());
+
+        var tunnel = new TunnelViewModel(
+            Mock.Of<ITunnelService>(),
+            Mock.Of<IAdbServerService>(),
+            Mock.Of<ISettingsService>(),
+            Mock.Of<IUiDispatcher>(),
+            Notifications.Object);
+
         return new MainWindowViewModel(
             emulator,
-            new DevicesViewModel(),
-            new TunnelViewModel(),
+            devices,
+            tunnel,
             settings,
             Diagnostics.Object,
             Notifications.Object);

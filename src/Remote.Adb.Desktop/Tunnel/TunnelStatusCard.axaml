@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Remote.Adb.Desktop.Tunnel"
+             xmlns:theme="using:CCSWE.Avalonia.Material"
+             x:Class="Remote.Adb.Desktop.Tunnel.TunnelStatusCard"
+             x:DataType="vm:TunnelViewModel">
+
+    <!-- Current tunnel state + the local adb-server restart action. DataContext is the page view model. -->
+    <theme:Card Classes="Elevated">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <PathIcon Grid.Column="0" Width="24" Height="24" Margin="0,0,12,0" VerticalAlignment="Center"
+                      Data="{StaticResource IconPlugsConnected}"
+                      Foreground="{DynamicResource OnSurfaceVariant}"/>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="{Binding StateText}" Classes="TitleMedium" Foreground="{DynamicResource OnSurface}"/>
+                <TextBlock Text="{Binding StatusMessage}" Classes="BodySmall" TextWrapping="Wrap"
+                           Foreground="{DynamicResource OnSurfaceVariant}"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+
+            <Button Grid.Column="2" Classes="Text" Content="Restart adb" VerticalAlignment="Center"
+                    Command="{Binding RestartAdbServerCommand}" ToolTip.Tip="Restart the local adb server"/>
+        </Grid>
+    </theme:Card>
+
+</UserControl>

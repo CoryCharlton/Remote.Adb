@@ -20,4 +20,11 @@ public interface IProcessRunner
     /// processes such as a launched emulator. The caller owns the returned <see cref="Process"/>.
     /// </summary>
     Process Start(string fileName, IReadOnlyList<string> arguments);
+
+    /// <summary>
+    /// Starts <paramref name="fileName"/> as a supervised long-running process (e.g. an SSH reverse tunnel):
+    /// its output is captured and its exit can be awaited via the returned <see cref="IProcessSession"/>.
+    /// <paramref name="environment"/> overlays variables onto the child's environment.
+    /// </summary>
+    IProcessSession StartSession(string fileName, IReadOnlyList<string> arguments, IReadOnlyDictionary<string, string>? environment = null);
 }

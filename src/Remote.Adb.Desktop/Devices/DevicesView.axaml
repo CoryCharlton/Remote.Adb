@@ -1,14 +1,42 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Remote.Adb.Desktop.Devices"
+             xmlns:dev="using:Remote.Adb.Desktop.Devices"
              xmlns:common="using:Remote.Adb.Desktop.Common"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
              x:Class="Remote.Adb.Desktop.Devices.DevicesView"
-             x:DataType="vm:DevicesViewModel">
+             x:DataType="dev:DevicesViewModel">
 
-    <common:EmptyState IconData="{StaticResource IconDeviceMobile}"
-                       Title="{Binding Title}" Description="{Binding Description}"/>
+    <!-- A pinned Refresh bar over the scrolling list. The * row bounds the ScrollViewer; the page inset lives on
+         the ItemsControl's Margin (never the ScrollViewer's Padding, which would leave the last cards unreachable). -->
+    <Panel>
+        <Grid RowDefinitions="Auto,*">
+
+            <Button Grid.Row="0" Classes="Text" Content="Refresh" HorizontalAlignment="Right"
+                    Margin="24,12,24,0" Command="{Binding RefreshCommand}"/>
+
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding Devices}" Margin="24,12,24,24">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="dev:DeviceRowViewModel">
+                            <dev:DeviceCardView/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <common:EmptyState IsVisible="{Binding IsListEmpty}"
+                           IconData="{StaticResource IconDeviceMobile}"
+                           Title="No devices connected"
+                           Description="Connect a device over USB or the network — start a tunnel or plug one in to see it here."/>
+
+    </Panel>
 
 </UserControl>

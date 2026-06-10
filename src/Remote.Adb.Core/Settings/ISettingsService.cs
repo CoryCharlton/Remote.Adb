@@ -21,4 +21,16 @@ public interface ISettingsService
 
     /// <summary>The selected application color theme.</summary>
     AppTheme Theme { get; set; }
+
+    /// <summary>Whether to open the SSH reverse tunnel automatically when the app launches.</summary>
+    bool TunnelAutoConnect { get; set; }
+
+    /// <summary>The remote SSH host the reverse tunnel connects to, or <see langword="null"/> if not configured.</summary>
+    string? TunnelHost { get; set; }
+
+    /// <summary>The local port the tunnel forwards back to (the local adb server port).</summary>
+    int TunnelLocalPort { get; set; }
+
+    /// <summary>The remote port the tunnel binds (the port the remote adb client connects to).</summary>
+    int TunnelRemotePort { get; set; }
 }

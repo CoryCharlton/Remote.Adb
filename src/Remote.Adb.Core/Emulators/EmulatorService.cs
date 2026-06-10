@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Remote.Adb.Core.Adb;
 using Remote.Adb.Core.Common;
 
 namespace Remote.Adb.Core.Emulators;

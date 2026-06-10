@@ -31,4 +31,16 @@ public sealed class SettingsModel
 
     /// <summary>The selected application color theme. Serialized as its enum name.</summary>
     public AppTheme Theme { get; set; } = AppTheme.Dark;
+
+    /// <summary>Whether to open the SSH reverse tunnel automatically when the app launches.</summary>
+    public bool TunnelAutoConnect { get; set; } = true;
+
+    /// <summary>The remote SSH host the reverse tunnel connects to; <see langword="null"/> until configured.</summary>
+    public string? TunnelHost { get; set; }
+
+    /// <summary>The local port the tunnel forwards back to (the local adb server port).</summary>
+    public int TunnelLocalPort { get; set; } = 5037;
+
+    /// <summary>The remote port the tunnel binds (the port the remote adb client connects to).</summary>
+    public int TunnelRemotePort { get; set; } = 5037;
 }

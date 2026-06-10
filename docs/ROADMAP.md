@@ -23,8 +23,7 @@ ADB connections to a remote development server. It replaces the workflows curren
 |-----------|-------|
 | **SDK Manager UI** (list / download / remove system images & packages via `sdkmanager`) | [tasks/sdk-manager.md](tasks/sdk-manager.md); unblocks creating from a not-yet-installed image. |
 | **DI lifetimes / stop manual construction** | [tasks/di-lifetimes.md](tasks/di-lifetimes.md); deferred until a concrete driver — scope view models to their owning window/view and resolve currently-`new`'d dialog windows/VMs from DI. |
-| **SSH reverse tunnel** for the adb server | Pillar 1. |
-| **Remote device connection** over network | Pillar 3. |
+| **Remote device connection** over network | Pillar 3. The Devices page now *lists* attached devices (`adb devices -l`); the remaining work is connecting to a device over the network (e.g. `adb connect host:port`). |
 
 ## Working notes
 
@@ -35,3 +34,5 @@ ADB connections to a remote development server. It replaces the workflows curren
 - To debug the desktop UI (catch runtime layout/XAML bugs a clean build misses), drive it under WSLg
   with screenshots — see [wslg-gui-debugging.md](wslg-gui-debugging.md) and the reproducible data
   harness at [tools/setup-fake-avd-harness.sh](tools/setup-fake-avd-harness.sh).
+- Possible enhancement: expose the list auto-refresh interval (currently a 5s constant shared by the
+  Emulators and Devices pages) as a persisted setting.

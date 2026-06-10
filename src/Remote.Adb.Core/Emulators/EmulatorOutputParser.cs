@@ -2,7 +2,7 @@ namespace Remote.Adb.Core.Emulators;
 
 /// <summary>
 /// Pure parsing of <c>emulator</c> / emulator-console command output. Kept free of I/O so it is
-/// trivially unit-testable.
+/// trivially unit-testable. Parses over spans, allocating only the strings it returns.
 /// </summary>
 public static class EmulatorOutputParser
 {
@@ -13,13 +13,13 @@ public static class EmulatorOutputParser
     {
         var names = new List<string>();
 
-        foreach (var rawLine in output.Split('\n'))
+        foreach (var rawLine in output.AsSpan().EnumerateLines())
         {
             var line = rawLine.Trim();
 
-            if (line.Length != 0)
+            if (!line.IsEmpty)
             {
-                names.Add(line);
+                names.Add(line.ToString());
             }
         }
 
@@ -32,18 +32,16 @@ public static class EmulatorOutputParser
     /// </summary>
     public static string? ParseAvdName(string output)
     {
-        foreach (var rawLine in output.Split('\n'))
+        foreach (var rawLine in output.AsSpan().EnumerateLines())
         {
             var line = rawLine.Trim();
 
-            if (line.Length == 0
-                || line.Equals("OK", StringComparison.Ordinal)
-                || line.Equals("KO", StringComparison.Ordinal))
+            if (line.IsEmpty || line.SequenceEqual("OK") || line.SequenceEqual("KO"))
             {
                 continue;
             }
 
-            return line;
+            return line.ToString();
         }
 
         return null;

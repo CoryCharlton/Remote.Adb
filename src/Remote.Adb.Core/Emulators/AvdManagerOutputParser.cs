@@ -1,3 +1,5 @@
+using Remote.Adb.Core.Adb;
+
 namespace Remote.Adb.Core.Emulators;
 
 /// <summary>
@@ -33,7 +35,7 @@ public static class AvdManagerOutputParser
             tag = null;
         }
 
-        foreach (var rawLine in output.Split('\n'))
+        foreach (var rawLine in output.AsSpan().EnumerateLines())
         {
             var line = rawLine.Trim();
 
@@ -44,15 +46,15 @@ public static class AvdManagerOutputParser
             }
             else if (line.StartsWith("Name:", StringComparison.Ordinal))
             {
-                name = line["Name:".Length..].Trim();
+                name = line["Name:".Length..].Trim().ToString();
             }
             else if (line.StartsWith("OEM", StringComparison.Ordinal) && line.IndexOf(':') is var oemColon and >= 0)
             {
-                oem = line[(oemColon + 1)..].Trim();
+                oem = line[(oemColon + 1)..].Trim().ToString();
             }
             else if (line.StartsWith("Tag", StringComparison.Ordinal) && line.IndexOf(':') is var tagColon and >= 0)
             {
-                tag = line[(tagColon + 1)..].Trim();
+                tag = line[(tagColon + 1)..].Trim().ToString();
             }
         }
 
@@ -61,20 +63,21 @@ public static class AvdManagerOutputParser
     }
 
     // Prefers the quoted id (e.g. "pixel_6"); falls back to the numeric id before " or ".
-    private static string ExtractId(string line)
+    private static string ExtractId(ReadOnlySpan<char> line)
     {
         var openQuote = line.IndexOf('"');
         if (openQuote >= 0)
         {
-            var closeQuote = line.IndexOf('"', openQuote + 1);
-            if (closeQuote > openQuote)
+            var afterOpen = line[(openQuote + 1)..];
+            var closeQuote = afterOpen.IndexOf('"');
+            if (closeQuote >= 0)
             {
-                return line[(openQuote + 1)..closeQuote];
+                return afterOpen[..closeQuote].ToString();
             }
         }
 
         var rest = line["id:".Length..].Trim();
         var orIndex = rest.IndexOf(" or ", StringComparison.Ordinal);
-        return (orIndex >= 0 ? rest[..orIndex] : rest).Trim();
+        return (orIndex >= 0 ? rest[..orIndex] : rest).Trim().ToString();
     }
 }

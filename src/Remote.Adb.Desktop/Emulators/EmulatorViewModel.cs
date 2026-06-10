@@ -9,7 +9,7 @@ using Remote.Adb.Desktop.Common.Threading;
 
 namespace Remote.Adb.Desktop.Emulators;
 
-public partial class EmulatorViewModel : ViewModelBase, IActivatable
+public partial class EmulatorViewModel : AutoRefreshingListViewModel
 {
     // A launched AVD takes a while to register with adb. Poll for it to come up, and stop
     // waiting after the timeout so a row can't get stuck in the "starting" state forever.
@@ -17,7 +17,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
 
     // Background re-list cadence while the page is live, so external start/stop/create shows up without a manual
     // refresh. Listing shells out to adb/emulator, so keep it modest.
-    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan RefreshInterval = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan StartTimeout = TimeSpan.FromMinutes(3);
 
     private readonly IAvdConfigStore _configStore;
@@ -25,12 +25,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     private readonly IAvdCreateDialog _createDialog;
     private readonly EmulatorDetailsViewModelFactory _detailsFactory;
     private readonly IEmulatorService _emulatorService;
-    private readonly INotificationService _notifications;
     private readonly IAvdProvisioningService _provisioning;
-    private readonly IDispatcherTimer _refreshTimer;
-    private bool _hasLoaded;
-    private bool _isRefreshing;
-    private bool _loadFailed;
 
     [ObservableProperty]
     private EmulatorDetailsViewModel? _selectedDetail;
@@ -44,6 +39,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         IConfirmDialog confirmDialog,
         INotificationService notifications,
         ITimerFactory timerFactory)
+        : base(timerFactory, notifications, RefreshInterval)
     {
         _emulatorService = emulatorService;
         _configStore = configStore;
@@ -51,20 +47,18 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         _detailsFactory = detailsFactory;
         _provisioning = provisioning;
         _confirmDialog = confirmDialog;
-        _notifications = notifications;
 
-        _refreshTimer = timerFactory.Create(RefreshInterval);
-        _refreshTimer.Tick += OnRefreshTick;
-
-        Emulators.CollectionChanged += (_, _) => OnPropertyChanged(nameof(IsListEmpty));
+        Emulators.CollectionChanged += (_, _) => RaiseIsListEmptyChanged();
     }
 
     public ObservableCollection<EmulatorDeviceViewModel> Emulators { get; } = [];
 
-    // The full-page empty state shows only once the first load has settled with nothing to show (not before a load,
-    // and not masking a load error). Deliberately independent of the transient refresh flag so a background tick
-    // doesn't flash it off and on.
-    public bool IsListEmpty => _hasLoaded && !_loadFailed && Emulators.Count == 0;
+    protected override bool IsEmpty => Emulators.Count == 0;
+
+    protected override string LoadErrorTitle => "Couldn't load emulators";
+
+    // Don't fight an in-flight start poll: skip the background tick while a row is mid-launch.
+    protected override bool SkipBackgroundTick => Emulators.Any(emulator => emulator.IsStarting);
 
     // Opens the create wizard; if an AVD was created, refresh so it shows up in the list.
     [RelayCommand]
@@ -72,7 +66,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
     {
         if (await _createDialog.ShowAsync())
         {
-            await RefreshAsync();
+            await RefreshAsync(notifyOnError: true);
         }
     }
 
@@ -105,7 +99,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
             }
 
             SelectedDetail = null;
-            await RefreshAsync();
+            await RefreshAsync(notifyOnError: true);
         }
         catch (ProcessLaunchException exception)
         {
@@ -113,105 +107,22 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         }
     }
 
+    protected override async Task LoadAsync() => Merge(await _emulatorService.ListAsync());
+
     // Reconciles the rows with the latest service snapshot in place, so selection and the
     // transient "starting" state survive a refresh instead of being thrown away.
-    private void Merge(IReadOnlyList<AndroidVirtualDevice> devices)
-    {
-        foreach (var device in devices)
-        {
-            var existing = Emulators.FirstOrDefault(e => e.Name == device.Name);
-
-            if (existing is null)
-            {
-                Emulators.Add(new EmulatorDeviceViewModel(device, DeleteCommand));
-            }
-            else
-            {
-                existing.Update(device);
-            }
-        }
-
-        for (var i = Emulators.Count - 1; i >= 0; i--)
-        {
-            if (devices.All(d => d.Name != Emulators[i].Name))
-            {
-                Emulators.RemoveAt(i);
-            }
-        }
-
-        var ordered = Emulators.OrderBy(emulator => emulator.DisplayName, StringComparer.OrdinalIgnoreCase).ToList();
-        for (var target = 0; target < ordered.Count; target++)
-        {
-            var current = Emulators.IndexOf(ordered[target]);
-            if (current != target)
-            {
-                Emulators.Move(current, target);
-            }
-        }
-    }
+    private void Merge(IReadOnlyList<AndroidVirtualDevice> devices) =>
+        Emulators.MergeBy(
+            devices,
+            device => device.Name,
+            row => row.Name,
+            device => new EmulatorDeviceViewModel(device, DeleteCommand),
+            (row, device) => row.Update(device),
+            row => row.DisplayName);
 
     // Transient failures surface as an auto-dismissing error toast (not a persistent inline label).
     private void NotifyError(string title, string message) =>
-        _notifications.Show(title, message, NotificationSeverity.Error);
-
-    /// <summary>Re-lists immediately (so the page is fresh on return/restore) and starts the background re-list
-    /// while the page is live.</summary>
-    public async Task OnActivatedAsync()
-    {
-        _refreshTimer.Start();
-        await RefreshAsync();
-    }
-
-    /// <summary>Stops the background re-list when the page is no longer live (navigated away, unfocused, minimized).</summary>
-    public void OnDeactivated()
-    {
-        _refreshTimer.Stop();
-    }
-
-    // Background tick: re-list silently (no toast spam on a persistent failure), but don't fight an in-flight start
-    // poll, and let RefreshAsync's reentry guard skip a tick that would overlap a manual refresh.
-    private void OnRefreshTick(object? sender, EventArgs e)
-    {
-        if (Emulators.Any(emulator => emulator.IsStarting))
-        {
-            return;
-        }
-
-        _ = RefreshAsync(notifyOnError: false);
-    }
-
-    [RelayCommand]
-    private Task RefreshAsync() => RefreshAsync(notifyOnError: true);
-
-    private async Task RefreshAsync(bool notifyOnError)
-    {
-        if (_isRefreshing)
-        {
-            return;
-        }
-
-        _isRefreshing = true;
-
-        try
-        {
-            Merge(await _emulatorService.ListAsync());
-            _loadFailed = false;
-        }
-        catch (ProcessLaunchException exception)
-        {
-            _loadFailed = true;
-            if (notifyOnError)
-            {
-                NotifyError("Couldn't load emulators", exception.Message);
-            }
-        }
-        finally
-        {
-            _isRefreshing = false;
-            _hasLoaded = true;
-            OnPropertyChanged(nameof(IsListEmpty));
-        }
-    }
+        Notifications.Show(title, message, NotificationSeverity.Error);
 
     [RelayCommand]
     private async Task StartAsync(EmulatorDeviceViewModel? device)
@@ -249,7 +160,7 @@ public partial class EmulatorViewModel : ViewModelBase, IActivatable
         try
         {
             await _emulatorService.StopAsync(device.Serial);
-            await RefreshAsync();
+            await RefreshAsync(notifyOnError: true);
         }
         catch (ProcessLaunchException exception)
         {

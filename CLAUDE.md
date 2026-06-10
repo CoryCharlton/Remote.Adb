@@ -195,6 +195,12 @@ Access modifiers do not affect ordering — when you go looking for `GetFoo()` y
 
 Any `static readonly` `HashSet<T>` or `Dictionary<TKey, TValue>` that is never mutated after construction should be a `FrozenSet<T>` / `FrozenDictionary<TKey, TValue>` (`System.Collections.Frozen`), built via `.ToFrozenSet(comparer)` / `.ToFrozenDictionary()`. Lookups are faster and the frozen type signals "immutable lookup" at the type level.
 
+## Prefer spans for multi-step string manipulation
+
+When a method performs **more than one** manipulation over the same string source — splitting, trimming, slicing, scanning, `StartsWith`/`IndexOf`/comparisons — operate over `ReadOnlySpan<char>` instead of allocating intermediate strings. Take `source.AsSpan()` once, iterate lines with `EnumerateLines()` (no `string[]`, and it handles `\r\n`), tokenize/slice with span operations (`Trim`, `IndexOf`, `SequenceEqual`, range slicing), and call `.ToString()` **only** on the values you actually keep. The `*OutputParser` types in `Remote.Adb.Core` are the canonical example. A single trivial operation on a string doesn't need this; the rule is about chains of manipulation on one source.
+
+This is the parse side only. The byte→string boundary itself (`StreamReader.ReadToEndAsync`) is a separate, larger optimization (read `BaseStream` into pooled buffers, decode to a `char[]`, parse the span) — don't undertake it ad hoc; it changes process-IO plumbing and the `string`-typed error/diagnostic surfaces (`ProcessResult.StandardError`, `IProcessSession.StandardError`).
+
 ## XML documentation
 
 In library projects that enable `GenerateDocumentationFile` (e.g. `Remote.Adb.Core`), document public/internal types and members; use `<inheritdoc />` for interface implementations where the interface doc suffices. Elsewhere, add docs only where they clarify intent.

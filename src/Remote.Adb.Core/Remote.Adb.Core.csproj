@@ -9,4 +9,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Remote.Adb.Core.UnitTests" />
+  </ItemGroup>
+
 </Project>

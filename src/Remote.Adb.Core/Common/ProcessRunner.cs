@@ -57,21 +57,6 @@ public sealed class ProcessRunner : IProcessRunner
         fileName.EndsWith(".bat", StringComparison.OrdinalIgnoreCase)
         || fileName.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase);
 
-    private static void KillTree(Process process)
-    {
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-            }
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or Win32Exception or NotSupportedException)
-        {
-            // The process already exited (or can't be killed) — nothing more to do.
-        }
-    }
-
     private static async Task ObserveAsync(Task task)
     {
         try
@@ -132,7 +117,7 @@ public sealed class ProcessRunner : IProcessRunner
             // Cancellation must not leave the spawned tool (a JVM/emulator) running detached. Kill the whole
             // tree, then observe the stream reads — which cancel too — so they don't surface later as
             // unobserved-task exceptions, before propagating the cancellation.
-            KillTree(process);
+            process.KillTree();
             await ObserveAsync(standardOutputTask);
             await ObserveAsync(standardErrorTask);
             throw;
@@ -150,6 +135,21 @@ public sealed class ProcessRunner : IProcessRunner
         StartProcess(process, fileName);
 
         return process;
+    }
+
+    /// <inheritdoc />
+    public IProcessSession StartSession(string fileName, IReadOnlyList<string> arguments, IReadOnlyDictionary<string, string>? environment = null)
+    {
+        var startInfo = CreateStartInfo(fileName, arguments, environment);
+        startInfo.RedirectStandardOutput = true;
+        startInfo.RedirectStandardError = true;
+
+        _logger.LogDebug("Starting session {FileName} {Arguments}", fileName, string.Join(' ', arguments));
+
+        var process = new Process { StartInfo = startInfo };
+        StartProcess(process, fileName);
+
+        return new ProcessSession(process);
     }
 
     private static void StartProcess(Process process, string fileName)

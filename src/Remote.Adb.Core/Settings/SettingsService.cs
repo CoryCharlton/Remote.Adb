@@ -63,6 +63,57 @@ public sealed class SettingsService : ISettingsService
         }
     }
 
+    public bool TunnelAutoConnect
+    {
+        get => _model.TunnelAutoConnect;
+        set
+        {
+            if (_model.TunnelAutoConnect == value)
+            {
+                return;
+            }
+
+            _model.TunnelAutoConnect = value;
+            _store.Save(_model);
+        }
+    }
+
+    public string? TunnelHost
+    {
+        get => _model.TunnelHost;
+        set => SetOverride(_model.TunnelHost, value, normalized => _model.TunnelHost = normalized);
+    }
+
+    public int TunnelLocalPort
+    {
+        get => _model.TunnelLocalPort;
+        set
+        {
+            if (_model.TunnelLocalPort == value)
+            {
+                return;
+            }
+
+            _model.TunnelLocalPort = value;
+            _store.Save(_model);
+        }
+    }
+
+    public int TunnelRemotePort
+    {
+        get => _model.TunnelRemotePort;
+        set
+        {
+            if (_model.TunnelRemotePort == value)
+            {
+                return;
+            }
+
+            _model.TunnelRemotePort = value;
+            _store.Save(_model);
+        }
+    }
+
     // A blank or whitespace path means "no override" — store it as null so it round-trips as absent.
     private static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

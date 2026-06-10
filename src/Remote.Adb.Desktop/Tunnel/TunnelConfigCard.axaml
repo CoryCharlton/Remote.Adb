@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Remote.Adb.Desktop.Tunnel"
+             xmlns:theme="using:CCSWE.Avalonia.Material"
+             x:Class="Remote.Adb.Desktop.Tunnel.TunnelConfigCard"
+             x:DataType="vm:TunnelViewModel">
+
+    <!-- Edits the persisted tunnel settings inline and opens/closes the tunnel. DataContext is the page view
+         model, inherited from the parent. -->
+    <theme:Card Classes="Elevated">
+        <StackPanel Spacing="16">
+            <TextBlock Text="Connection" Classes="TitleMedium" Foreground="{DynamicResource OnSurface}"/>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Remote host" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"/>
+                <TextBox Text="{Binding RemoteHost}" PlaceholderText="host or user@host"/>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,16,*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock Text="Remote port" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"/>
+                    <TextBox Text="{Binding RemotePort}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4">
+                    <TextBlock Text="Local port" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"/>
+                    <TextBox Text="{Binding LocalPort}"/>
+                </StackPanel>
+            </Grid>
+
+            <ToggleSwitch Content="Connect automatically at launch" IsChecked="{Binding AutoConnect}"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="Filled" Content="Connect" Command="{Binding ConnectCommand}"
+                        IsVisible="{Binding ShowConnect}"/>
+                <Button Classes="Text" Content="Disconnect" Command="{Binding DisconnectCommand}"
+                        IsVisible="{Binding CanDisconnect}"/>
+            </StackPanel>
+        </StackPanel>
+    </theme:Card>
+
+</UserControl>

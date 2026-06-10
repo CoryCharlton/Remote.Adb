@@ -1,14 +1,21 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Remote.Adb.Desktop.Tunnel"
-             xmlns:common="using:Remote.Adb.Desktop.Common"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
              x:Class="Remote.Adb.Desktop.Tunnel.TunnelView"
              x:DataType="vm:TunnelViewModel">
 
-    <common:EmptyState IconData="{StaticResource IconPlugsConnected}"
-                       Title="{Binding Title}" Description="{Binding Description}"/>
+    <!-- Thin shell: a scrollable stack of the status and config cards. The page inset lives on the scrolled
+         content's Margin, never the ScrollViewer's Padding. The Grid * row bounds the ScrollViewer's viewport. -->
+    <Grid RowDefinitions="*">
+        <ScrollViewer>
+            <StackPanel Margin="24" Spacing="16">
+                <vm:TunnelStatusCard/>
+                <vm:TunnelConfigCard/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 
 </UserControl>

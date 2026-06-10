@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Remote.Adb.Core;
 using Remote.Adb.Core.Common;
 using Remote.Adb.Core.Emulators;
+using Remote.Adb.Core.Settings;
+using Remote.Adb.Core.Tunnel;
 
 var services = new ServiceCollection();
 services.AddLogging(builder => builder.AddSimpleConsole(options => options.SingleLine = true).SetMinimumLevel(LogLevel.Warning));
@@ -25,6 +27,10 @@ try
             provider.GetRequiredService<IEmulatorService>(),
             provider.GetRequiredService<IAvdConfigStore>(),
             provider.GetRequiredService<IAvdProvisioningService>()),
+        "tunnel" => await HandleTunnelAsync(
+            args[1..],
+            provider.GetRequiredService<ITunnelService>(),
+            provider.GetRequiredService<ISettingsService>()),
         _ => Unknown(args[0]),
     };
 }
@@ -205,6 +211,56 @@ static async Task<int> HandleEmulatorAsync(string[] args, IEmulatorService emula
     }
 }
 
+// Opens the reverse tunnel and blocks until Ctrl+C (or the tunnel drops), mirroring adb-tunnel.bat's
+// "keep this window open" behavior. The host falls back to the saved setting when omitted.
+static async Task<int> HandleTunnelAsync(string[] args, ITunnelService tunnel, ISettingsService settings)
+{
+    var host = args.Length > 0 ? args[0] : settings.TunnelHost;
+
+    if (string.IsNullOrWhiteSpace(host))
+    {
+        Console.Error.WriteLine("Usage: tunnel [host]   (no host configured — pass one, or set it in the desktop app)");
+        return 1;
+    }
+
+    using var stop = new CancellationTokenSource();
+
+    tunnel.StatusChanged += (_, status) =>
+    {
+        Console.WriteLine(status.Message is null ? $"[tunnel] {status.State}" : $"[tunnel] {status.State}: {status.Message}");
+
+        if (status.State is TunnelState.Faulted or TunnelState.Disconnected)
+        {
+            stop.Cancel();
+        }
+    };
+
+    Console.CancelKeyPress += (_, eventArgs) =>
+    {
+        eventArgs.Cancel = true;
+        stop.Cancel();
+    };
+
+    Console.WriteLine($"Opening reverse tunnel to {host}. Press Ctrl+C to close.");
+    await tunnel.ConnectAsync(host);
+
+    if (tunnel.Status.State != TunnelState.Faulted)
+    {
+        try
+        {
+            await Task.Delay(Timeout.Infinite, stop.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+
+        await tunnel.DisconnectAsync();
+        Console.WriteLine("Tunnel closed.");
+    }
+
+    return tunnel.Status.State == TunnelState.Faulted ? 1 : 0;
+}
+
 // Parses `--key value` pairs into changes; a bare `--key` with no following value becomes a removal.
 static bool TryParseEdits(string[] tokens, out Dictionary<string, string> changes, out List<string> removals, out string? error)
 {
@@ -333,4 +389,5 @@ static void PrintUsage()
     Console.WriteLine("  emulator delete <avd-name>    Delete the given AVD");
     Console.WriteLine("  emulator start <avd-name>     Launch the given AVD");
     Console.WriteLine("  emulator stop <serial>        Stop the running emulator with the given serial");
+    Console.WriteLine("  tunnel [host]                 Open the SSH reverse tunnel (host falls back to the saved setting); Ctrl+C closes it");
 }
