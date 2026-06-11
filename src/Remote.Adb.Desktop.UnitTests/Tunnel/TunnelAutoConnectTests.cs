@@ -40,7 +40,16 @@ public class TunnelAutoConnectTests
             Settings.SetupGet(s => s.TunnelAutoConnect).Returns(true);
             Settings.SetupGet(s => s.TunnelHost).Returns("devhost");
 
-            await RunAsync(CreateService());
+            // The hosted service fires ConnectAsync from ExecuteAsync; wait for that call rather than racing it.
+            var connected = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            Tunnel.Setup(t => t.ConnectAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+                .Callback(() => connected.TrySetResult())
+                .Returns(Task.CompletedTask);
+
+            var service = CreateService();
+            await ((IHostedService)service).StartAsync(CancellationToken.None);
+            await connected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await ((IHostedService)service).StopAsync(CancellationToken.None);
 
             Tunnel.Verify(t => t.ConnectAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
         }

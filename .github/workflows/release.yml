@@ -49,24 +49,25 @@ jobs:
       # One Linux runner cross-publishes every RID (framework-dependent, so the build OS doesn't matter).
       # zip for Windows; tar.gz for the unix RIDs so the apphost executable bit survives.
       - name: Publish and package
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           mkdir -p artifacts
           for rid in win-x64 linux-x64 osx-x64 osx-arm64; do
+            out="out/${rid}"
+            # The Desktop and Console heads ship together and share the framework-dependent deps, so publish
+            # both into one folder per RID (shared DLLs overwrite identically; each keeps its own launcher).
             for proj in Desktop Console; do
-              out="out/${proj}-${rid}"
               dotnet publish "src/Remote.Adb.${proj}/Remote.Adb.${proj}.csproj" \
                 -c Release -r "$rid" --self-contained false \
                 /p:ContinuousIntegrationBuild=true -o "$out"
-              name="Remote.Adb.${proj}-${rid}-${VERSION}"
-              if [ "$rid" = "win-x64" ]; then
-                (cd "$out" && zip -qr "${GITHUB_WORKSPACE}/artifacts/${name}.zip" .)
-              else
-                tar -czf "artifacts/${name}.tar.gz" -C "$out" .
-              fi
             done
+            # No version in the asset name, so /releases/latest/download/Remote.Adb-<rid>.<ext> is a stable URL.
+            name="Remote.Adb-${rid}"
+            if [ "$rid" = "win-x64" ]; then
+              (cd "$out" && zip -qr "${GITHUB_WORKSPACE}/artifacts/${name}.zip" .)
+            else
+              tar -czf "artifacts/${name}.tar.gz" -C "$out" .
+            fi
           done
           (cd artifacts && sha256sum * > SHA256SUMS.txt)
           ls -l artifacts
