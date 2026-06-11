@@ -8,6 +8,20 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <Authors>Cory Charlton</Authors>
+    <Company>Cory Charlton</Company>
+    <Copyright>© 2026 Cory Charlton</Copyright>
+    <RepositoryUrl>https://github.com/CoryCharlton/Remote.Adb</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="Nerdbank.GitVersioning" Condition="!Exists('packages.config')">

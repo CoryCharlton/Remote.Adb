@@ -1,5 +1,10 @@
 # Remote.Adb
 
+[![CI](https://img.shields.io/github/actions/workflow/status/CoryCharlton/Remote.Adb/ci.yml?branch=master&label=build)](https://github.com/CoryCharlton/Remote.Adb/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/CoryCharlton/Remote.Adb/codeql.yml?branch=master&label=codeql)](https://github.com/CoryCharlton/Remote.Adb/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/CoryCharlton/Remote.Adb?display_name=tag&sort=semver)](https://github.com/CoryCharlton/Remote.Adb/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
+
 A cross-platform desktop app (with a matching console) that bridges Android development between your
 local workstation and a remote dev machine: it opens the SSH reverse tunnel that lets a remote `adb`
 reach your locally-attached devices and emulators, and manages those emulators along the way.
@@ -147,6 +152,21 @@ The reverse-tunnel workflow has a few non-obvious requirements the implementatio
 
 The app adds non-interactive `ssh` options (`BatchMode`, `ConnectTimeout`, `GSSAPIAuthentication=no`,
 `StrictHostKeyChecking=accept-new`) so it never hangs on a prompt from a windowless GUI process.
+
+### Releasing
+
+Versioning is [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) — `version.json`
+sets the major.minor; the patch comes from git height. To cut a release, let NBGV derive the tag:
+
+```bash
+dotnet tool restore
+dotnet tool run nbgv tag      # creates v<major>.<minor>.<patch> for HEAD
+git push origin <tag>          # e.g. git push origin v0.1.18
+```
+
+Pushing the `v*` tag triggers `.github/workflows/release.yml`, which publishes framework-dependent zips/tarballs
+of the Desktop and Console heads for `win-x64`/`linux-x64`/`osx-x64`/`osx-arm64` and creates a GitHub Release
+with auto-generated notes. Bump `version.json` (and commit) when you want a new major/minor.
 
 ## License
 
