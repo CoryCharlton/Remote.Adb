@@ -53,9 +53,15 @@ typically your **local workstation** (Windows in my setup, though the app is cro
 
 ## Install & run
 
-Download the archive for your platform from the [latest release](https://github.com/CoryCharlton/Remote.Adb/releases/latest) —
-each one contains both the desktop app and the console. The builds are framework-dependent, so you'll need the
-[.NET 10 runtime](https://dotnet.microsoft.com/download) installed. Or build from source:
+Download the latest build for your platform — each archive contains both the desktop app and the console. The
+builds are framework-dependent, so you'll need the [.NET 10 runtime](https://dotnet.microsoft.com/download) installed:
+
+- **Windows (x64):** [`Remote.Adb-win-x64.zip`](https://github.com/CoryCharlton/Remote.Adb/releases/latest/download/Remote.Adb-win-x64.zip)
+- **Linux (x64):** [`Remote.Adb-linux-x64.tar.gz`](https://github.com/CoryCharlton/Remote.Adb/releases/latest/download/Remote.Adb-linux-x64.tar.gz)
+- **macOS (Apple Silicon):** [`Remote.Adb-osx-arm64.tar.gz`](https://github.com/CoryCharlton/Remote.Adb/releases/latest/download/Remote.Adb-osx-arm64.tar.gz)
+- **macOS (Intel):** [`Remote.Adb-osx-x64.tar.gz`](https://github.com/CoryCharlton/Remote.Adb/releases/latest/download/Remote.Adb-osx-x64.tar.gz)
+
+(Or browse the [Releases page](https://github.com/CoryCharlton/Remote.Adb/releases).) Or build from source:
 
 ```bash
 # Build (Release)

@@ -49,8 +49,6 @@ jobs:
       # One Linux runner cross-publishes every RID (framework-dependent, so the build OS doesn't matter).
       # zip for Windows; tar.gz for the unix RIDs so the apphost executable bit survives.
       - name: Publish and package
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
           mkdir -p artifacts
@@ -63,7 +61,8 @@ jobs:
                 -c Release -r "$rid" --self-contained false \
                 /p:ContinuousIntegrationBuild=true -o "$out"
             done
-            name="Remote.Adb-${rid}-${VERSION}"
+            # No version in the asset name, so /releases/latest/download/Remote.Adb-<rid>.<ext> is a stable URL.
+            name="Remote.Adb-${rid}"
             if [ "$rid" = "win-x64" ]; then
               (cd "$out" && zip -qr "${GITHUB_WORKSPACE}/artifacts/${name}.zip" .)
             else
