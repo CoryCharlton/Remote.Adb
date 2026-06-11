@@ -53,7 +53,9 @@ typically your **local workstation** (Windows in my setup, though the app is cro
 
 ## Install & run
 
-There are no published binaries yet — build from source:
+Download the archive for your platform from the [latest release](https://github.com/CoryCharlton/Remote.Adb/releases/latest) —
+each one contains both the desktop app and the console. The builds are framework-dependent, so you'll need the
+[.NET 10 runtime](https://dotnet.microsoft.com/download) installed. Or build from source:
 
 ```bash
 # Build (Release)
@@ -164,9 +166,9 @@ dotnet tool run nbgv tag      # creates v<major>.<minor>.<patch> for HEAD
 git push origin <tag>          # e.g. git push origin v0.1.18
 ```
 
-Pushing the `v*` tag triggers `.github/workflows/release.yml`, which publishes framework-dependent zips/tarballs
-of the Desktop and Console heads for `win-x64`/`linux-x64`/`osx-x64`/`osx-arm64` and creates a GitHub Release
-with auto-generated notes. Bump `version.json` (and commit) when you want a new major/minor.
+Pushing the `v*` tag triggers `.github/workflows/release.yml`, which publishes one framework-dependent archive
+per RID (`win-x64`/`linux-x64`/`osx-x64`/`osx-arm64`), each containing both the Desktop and Console, and creates
+a GitHub Release with auto-generated notes. Bump `version.json` (and commit) when you want a new major/minor.
 
 ## License
 

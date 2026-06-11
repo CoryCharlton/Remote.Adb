@@ -55,18 +55,20 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts
           for rid in win-x64 linux-x64 osx-x64 osx-arm64; do
+            out="out/${rid}"
+            # The Desktop and Console heads ship together and share the framework-dependent deps, so publish
+            # both into one folder per RID (shared DLLs overwrite identically; each keeps its own launcher).
             for proj in Desktop Console; do
-              out="out/${proj}-${rid}"
               dotnet publish "src/Remote.Adb.${proj}/Remote.Adb.${proj}.csproj" \
                 -c Release -r "$rid" --self-contained false \
                 /p:ContinuousIntegrationBuild=true -o "$out"
-              name="Remote.Adb.${proj}-${rid}-${VERSION}"
-              if [ "$rid" = "win-x64" ]; then
-                (cd "$out" && zip -qr "${GITHUB_WORKSPACE}/artifacts/${name}.zip" .)
-              else
-                tar -czf "artifacts/${name}.tar.gz" -C "$out" .
-              fi
             done
+            name="Remote.Adb-${rid}-${VERSION}"
+            if [ "$rid" = "win-x64" ]; then
+              (cd "$out" && zip -qr "${GITHUB_WORKSPACE}/artifacts/${name}.zip" .)
+            else
+              tar -czf "artifacts/${name}.tar.gz" -C "$out" .
+            fi
           done
           (cd artifacts && sha256sum * > SHA256SUMS.txt)
           ls -l artifacts
