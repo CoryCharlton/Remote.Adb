@@ -48,6 +48,8 @@ public class TunnelServiceTests
         {
             SettleWindow = TimeSpan.FromMilliseconds(50),
             HealthCheckInterval = TimeSpan.FromMilliseconds(20),
+            ReconnectBackoff = TimeSpan.FromMilliseconds(10),
+            MaxReconnectAttempts = 3,
         };
 
         return _service;
@@ -236,7 +238,7 @@ public class TunnelServiceTests
         }
 
         [Test]
-        public async Task It_faults_when_the_local_adb_server_dies_underneath_the_forward()
+        public async Task It_faults_after_reconnects_fail_when_the_local_adb_server_stays_down()
         {
             var processRunner = new Mock<IProcessRunner>();
             SetupRemoteKill(processRunner);
@@ -247,10 +249,12 @@ public class TunnelServiceTests
             await service.ConnectAsync();
             Assert.That(service.Status.State, Is.EqualTo(TunnelState.Connected));
 
+            // Server dies and stays down: the health monitor drops the tunnel, and every reconnect fails its
+            // server-liveness check, so after the bounded attempts it faults rather than looping forever.
             adbServer.Setup(a => a.IsRunningAsync(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(false);
             var status = await WaitForStateAsync(service, TunnelState.Faulted);
 
-            Assert.That(status.Message, Does.Contain("adb server"));
+            Assert.That(status.Message, Does.Contain("reconnect"));
             Assert.That(session.KillCount, Is.GreaterThanOrEqualTo(1));
         }
     }
@@ -299,7 +303,40 @@ public class TunnelServiceTests
     public class When_The_Tunnel_Drops : TunnelServiceTests
     {
         [Test]
-        public async Task It_faults_when_a_connected_session_exits()
+        public async Task It_auto_reconnects_after_a_connected_session_exits()
+        {
+            var processRunner = new Mock<IProcessRunner>();
+            SetupRemoteKill(processRunner);
+
+            var first = new FakeProcessSession();
+            var second = new FakeProcessSession();
+            var secondStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var starts = 0;
+            SetupStartSession(processRunner, () =>
+            {
+                if (++starts == 1)
+                {
+                    return first;
+                }
+
+                secondStarted.TrySetResult();
+                return second;
+            });
+
+            var service = CreateService(processRunner, out _);
+            await service.ConnectAsync();
+            Assert.That(service.Status.State, Is.EqualTo(TunnelState.Connected));
+
+            first.Exit(1, "connection closed by remote host");
+            await secondStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await WaitForStateAsync(service, TunnelState.Connected);
+
+            Assert.That(service.Status.State, Is.EqualTo(TunnelState.Connected));
+            Assert.That(starts, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task It_faults_after_exhausting_reconnect_attempts()
         {
             var processRunner = new Mock<IProcessRunner>();
             SetupRemoteKill(processRunner);
@@ -307,14 +344,38 @@ public class TunnelServiceTests
             SetupStartSession(processRunner, () => session);
 
             var service = CreateService(processRunner, out _);
+            await service.ConnectAsync();
+            Assert.That(service.Status.State, Is.EqualTo(TunnelState.Connected));
 
+            // The remote becomes unreachable, so every reconnect fails — after the bounded attempts it faults.
+            SetupRemoteKill(processRunner, exitCode: 255, standardError: "Connection refused");
+            session.Exit(1, "connection closed by remote host");
+            var status = await WaitForStateAsync(service, TunnelState.Faulted);
+
+            Assert.That(status.Message, Does.Contain("reconnect"));
+        }
+
+        [Test]
+        public async Task It_stops_reconnecting_when_the_user_disconnects()
+        {
+            var processRunner = new Mock<IProcessRunner>();
+            SetupRemoteKill(processRunner);
+            var session = new FakeProcessSession();
+            SetupStartSession(processRunner, () => session);
+
+            var service = CreateService(processRunner, out _);
+            service.ReconnectBackoff = TimeSpan.FromSeconds(5);   // park the supervisor in its backoff
             await service.ConnectAsync();
             Assert.That(service.Status.State, Is.EqualTo(TunnelState.Connected));
 
             session.Exit(1, "connection closed by remote host");
-            var status = await WaitForStateAsync(service, TunnelState.Faulted);
+            await WaitForStateAsync(service, TunnelState.Reconnecting);
+            await service.DisconnectAsync();
 
-            Assert.That(status.Message, Does.Contain("dropped"));
+            Assert.That(service.Status.State, Is.EqualTo(TunnelState.Disconnected));
+            processRunner.Verify(
+                r => r.StartSession(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<IReadOnlyDictionary<string, string>?>()),
+                Times.Once);
         }
     }
 }

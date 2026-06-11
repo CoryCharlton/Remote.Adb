@@ -48,7 +48,7 @@ public partial class TunnelViewModel : ViewModelBase, IActivatable
 
     public bool CanConnect => !string.IsNullOrWhiteSpace(RemoteHost) && _tunnel.Status.State is TunnelState.Disconnected or TunnelState.Faulted;
 
-    public bool CanDisconnect => _tunnel.Status.State is TunnelState.Connected or TunnelState.Connecting;
+    public bool CanDisconnect => _tunnel.Status.State is TunnelState.Connected or TunnelState.Connecting or TunnelState.Reconnecting;
 
     public bool IsConnected => _tunnel.Status.State == TunnelState.Connected;
 
@@ -57,6 +57,7 @@ public partial class TunnelViewModel : ViewModelBase, IActivatable
     public string StateText => _tunnel.Status.State switch
     {
         TunnelState.Connecting => "Connecting…",
+        TunnelState.Reconnecting => "Reconnecting…",
         TunnelState.Connected => "Connected",
         TunnelState.Faulted => "Error",
         _ => "Not connected",

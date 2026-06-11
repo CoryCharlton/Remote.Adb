@@ -33,6 +33,7 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
     private readonly ISettingsService _settings;
     private TunnelConnection? _connection;
     private CancellationTokenSource? _connectCts;
+    private CancellationTokenSource? _reconnectCts;
     private TunnelStatus _status = new(TunnelState.Disconnected, null);
 
     public TunnelService(IProcessRunner processRunner, IAdbServerService adbServer, ISettingsService settings, IExecutableFinder executableFinder, ILogger<TunnelService> logger)
@@ -57,6 +58,12 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
     // Internal so tests can shorten it.
     internal TimeSpan HealthCheckInterval { get; set; } = TimeSpan.FromSeconds(5);
 
+    // When a connected tunnel drops on its own, auto-reconnect this many times (with a growing backoff) before
+    // giving up and faulting. Internal so tests can shorten/shrink them.
+    internal int MaxReconnectAttempts { get; set; } = 5;
+
+    internal TimeSpan ReconnectBackoff { get; set; } = TimeSpan.FromSeconds(2);
+
     // How long the ssh process must stay up past launch before we treat the forward as established. With
     // ExitOnForwardFailure a losing bind exits well within this window. Internal so tests can shorten it.
     internal TimeSpan SettleWindow { get; set; } = TimeSpan.FromSeconds(1.5);
@@ -67,6 +74,8 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
     /// <inheritdoc />
     public async Task ConnectAsync(string? host = null, CancellationToken cancellationToken = default)
     {
+        CancelReconnect();
+
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         await _gate.WaitAsync(cancellationToken);
@@ -77,7 +86,12 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
                 _connectCts = cts;
             }
 
-            await ConnectCoreAsync(host, cts.Token);
+            SetStatus(TunnelState.Connecting, null);
+            var error = await TryConnectAsync(host, cts.Token);
+            if (error is not null)
+            {
+                SetStatus(TunnelState.Faulted, error);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -99,6 +113,7 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
     /// <inheritdoc />
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
+        CancelReconnect();
         CancelConnectInFlight();
 
         await _gate.WaitAsync(cancellationToken);
@@ -116,6 +131,7 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
+        CancelReconnect();
         CancelConnectInFlight();
 
         await _gate.WaitAsync();
@@ -139,33 +155,238 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
         }
     }
 
-    private async Task ConnectCoreAsync(string? host, CancellationToken cancellationToken)
+    // Cancels an in-flight reconnect supervisor (if any), so a user Connect/Disconnect supersedes it.
+    private void CancelReconnect()
+    {
+        lock (_connectLock)
+        {
+            _reconnectCts?.Cancel();
+        }
+    }
+
+    private static string Detail(string standardError, int? exitCode)
+    {
+        var trimmed = standardError.Trim();
+        return trimmed.Length > 0 ? trimmed : $"ssh exited with code {exitCode}.";
+    }
+
+    private async Task MonitorServerHealthAsync(TunnelConnection connection, int port)
+    {
+        const int failuresBeforeFault = 2;
+        var failures = 0;
+        var token = connection.Cts.Token;
+
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(HealthCheckInterval, token);
+
+                if (await _adbServer.IsRunningAsync(port, token))
+                {
+                    failures = 0;
+                    continue;
+                }
+
+                // Ride through a brief outage (a deliberate `RestartAsync` bounces the server for ~1s); only act
+                // on a sustained one (the remote ran `adb kill-server` through the forward).
+                if (++failures < failuresBeforeFault)
+                {
+                    continue;
+                }
+
+                await OnConnectionLostAsync(
+                    connection,
+                    "The local adb server stopped.",
+                    () => _logger.LogWarning("Local adb server is no longer listening on 127.0.0.1:{Port}.", port));
+                return;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task MonitorSshExitAsync(TunnelConnection connection)
+    {
+        int exitCode;
+        try
+        {
+            exitCode = await connection.ExitTask;
+        }
+        catch
+        {
+            exitCode = -1;
+        }
+
+        await OnConnectionLostAsync(
+            connection,
+            $"The tunnel dropped ({Detail(connection.Session.StandardError, exitCode)})",
+            () => _logger.LogWarning("Tunnel dropped (exit {ExitCode}): {Error}", exitCode, connection.Session.StandardError));
+    }
+
+    // A monitor saw the live connection drop on its own (ssh exited, or the local adb server died). Retire it and
+    // kick off the reconnect supervisor. Iff this connection is still the current one — the loser of a race (or a
+    // user Disconnect, which nulls _connection first under the gate) finds it isn't current and does nothing.
+    private async Task OnConnectionLostAsync(TunnelConnection connection, string reason, Action log)
+    {
+        var lost = false;
+        CancellationTokenSource? reconnectCts = null;
+
+        await _gate.WaitAsync();
+        try
+        {
+            if (ReferenceEquals(_connection, connection))
+            {
+                lost = true;
+                _connection = null;
+                log();
+
+                reconnectCts = new CancellationTokenSource();
+                lock (_connectLock)
+                {
+                    _reconnectCts = reconnectCts;
+                }
+
+                SetStatus(TunnelState.Reconnecting, $"{reason} Reconnecting…");
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        if (lost)
+        {
+            await connection.DisposeAsync();
+            _ = ReconnectAsync(reconnectCts!);
+        }
+    }
+
+    // Re-establishes a dropped tunnel with a growing backoff, up to MaxReconnectAttempts, before faulting. Runs
+    // fire-and-forget; cancelled (and superseded) by a user Connect/Disconnect/Dispose via CancelReconnect.
+    private async Task ReconnectAsync(CancellationTokenSource cts)
+    {
+        var token = cts.Token;
+        string? error = null;
+
+        try
+        {
+            for (var attempt = 1; attempt <= MaxReconnectAttempts; attempt++)
+            {
+                await Task.Delay(ReconnectBackoff * attempt, token);
+
+                await _gate.WaitAsync(token);
+                try
+                {
+                    SetStatus(TunnelState.Reconnecting, $"Reconnecting… (attempt {attempt}/{MaxReconnectAttempts})");
+                    error = await TryConnectAsync(null, token);
+                }
+                finally
+                {
+                    _gate.Release();
+                }
+
+                if (error is null)
+                {
+                    return;
+                }
+
+                _logger.LogWarning("Tunnel reconnect attempt {Attempt}/{Max} failed: {Error}", attempt, MaxReconnectAttempts, error);
+            }
+
+            await _gate.WaitAsync(token);
+            try
+            {
+                SetStatus(TunnelState.Faulted, $"Lost the tunnel and couldn't reconnect after {MaxReconnectAttempts} attempts. {error}");
+            }
+            finally
+            {
+                _gate.Release();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            lock (_connectLock)
+            {
+                if (ReferenceEquals(_reconnectCts, cts))
+                {
+                    _reconnectCts = null;
+                }
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    private void SetStatus(TunnelState state, string? message)
+    {
+        _status = new TunnelStatus(state, message);
+
+        if (state == TunnelState.Faulted)
+        {
+            _logger.LogWarning("Tunnel faulted: {Message}", message);
+        }
+        else
+        {
+            _logger.LogInformation("Tunnel {State}{Message}", state, message is null ? string.Empty : $": {message}");
+        }
+
+        StatusChanged?.Invoke(this, _status);
+    }
+
+    // Tears down the live connection, if any. Callers hold _gate (Connect/Disconnect/Dispose), so this is the one
+    // place a connection is retired from the owning side; a monitor retires its own via OnConnectionLostAsync.
+    private async Task TearDownConnectionAsync()
+    {
+        var existing = _connection;
+        if (existing is null)
+        {
+            return;
+        }
+
+        _connection = null;
+        await existing.DisposeAsync();
+    }
+
+    // Runs the full connect sequence (shared by a manual ConnectAsync and the reconnect supervisor). On success,
+    // stores the connection, starts the monitors, sets Connected, and returns null. On failure it returns the
+    // error message *without* faulting, so the caller decides (a manual connect faults; a reconnect retries).
+    // Throws OperationCanceledException if cancelled. Callers hold _gate.
+    private async Task<string?> TryConnectAsync(string? host, CancellationToken cancellationToken)
     {
         await TearDownConnectionAsync();
 
         var resolvedHost = string.IsNullOrWhiteSpace(host) ? _settings.TunnelHost : host.Trim();
         if (string.IsNullOrWhiteSpace(resolvedHost))
         {
-            SetStatus(TunnelState.Faulted, "No remote host configured.");
-            return;
+            return "No remote host configured.";
         }
 
         var ssh = _executableFinder.FindOnPath("ssh");
         if (ssh is null)
         {
-            SetStatus(TunnelState.Faulted, "OpenSSH 'ssh' was not found on PATH.");
-            return;
+            return "OpenSSH 'ssh' was not found on PATH.";
         }
 
         var remotePort = _settings.TunnelRemotePort;
         var localPort = _settings.TunnelLocalPort;
         var forwardSpec = $"{remotePort}:127.0.0.1:{localPort}";
 
-        SetStatus(TunnelState.Connecting, null);
-
         try
         {
             await _adbServer.StartAsync(cancellationToken);
+
+            // The forward target is the local adb server; if it isn't listening (e.g. start-server couldn't bring
+            // it back), the tunnel would be useless — fail now rather than declare a dead-target "connection".
+            // This also bounds reconnect: a drop caused by a server that stays down can't loop forever.
+            if (!await _adbServer.IsRunningAsync(localPort, cancellationToken))
+            {
+                return $"The local adb server is not listening on 127.0.0.1:{localPort}.";
+            }
 
             for (var attempt = 1; attempt <= MaxRetries; attempt++)
             {
@@ -188,8 +409,7 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
 
                     if (attempt == MaxRetries)
                     {
-                        SetStatus(TunnelState.Faulted, $"ssh to {resolvedHost} did not respond within {AttemptTimeout.TotalSeconds:N0}s. Check that key-based ssh to the host works non-interactively (try it from a terminal).");
-                        return;
+                        return $"ssh to {resolvedHost} did not respond within {AttemptTimeout.TotalSeconds:N0}s. Check that key-based ssh to the host works non-interactively (try it from a terminal).";
                     }
 
                     continue;
@@ -197,8 +417,7 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
 
                 if (!kill.Success)
                 {
-                    SetStatus(TunnelState.Faulted, $"Could not reach {resolvedHost} over SSH: {Detail(kill.StandardError, kill.ExitCode)}");
-                    return;
+                    return $"Could not reach {resolvedHost} over SSH: {Detail(kill.StandardError, kill.ExitCode)}";
                 }
 
                 var session = _processRunner.StartSession(ssh, [.. SshConnectOptions, "-o", "ExitOnForwardFailure=yes", "-N", "-R", forwardSpec, resolvedHost]);
@@ -214,8 +433,7 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
 
                     if (attempt == MaxRetries)
                     {
-                        SetStatus(TunnelState.Faulted, $"The reverse forward could not bind after {MaxRetries} attempts. {Detail(error, session.ExitCode)}");
-                        return;
+                        return $"The reverse forward could not bind after {MaxRetries} attempts. {Detail(error, session.ExitCode)}";
                     }
 
                     continue;
@@ -233,133 +451,15 @@ public sealed class TunnelService : ITunnelService, IAsyncDisposable
                 SetStatus(TunnelState.Connected, $"Forwarding {resolvedHost}:{remotePort} → 127.0.0.1:{localPort}");
                 _ = MonitorSshExitAsync(connection);
                 _ = MonitorServerHealthAsync(connection, localPort);
-                return;
+                return null;
             }
+
+            return "The tunnel could not be established.";
         }
         catch (ProcessLaunchException exception)
         {
-            SetStatus(TunnelState.Faulted, exception.Message);
+            return exception.Message;
         }
-    }
-
-    private static string Detail(string standardError, int? exitCode)
-    {
-        var trimmed = standardError.Trim();
-        return trimmed.Length > 0 ? trimmed : $"ssh exited with code {exitCode}.";
-    }
-
-    // Faults the tunnel iff this connection is still the live one, then disposes it. Both monitors funnel through
-    // here so they can't double-fault or double-dispose, and the loser of the race simply finds it isn't current.
-    private async Task FaultIfCurrentAsync(TunnelConnection connection, Func<string> message, Action log)
-    {
-        var current = false;
-
-        await _gate.WaitAsync();
-        try
-        {
-            if (ReferenceEquals(_connection, connection))
-            {
-                current = true;
-                _connection = null;
-                log();
-                SetStatus(TunnelState.Faulted, message());
-            }
-        }
-        finally
-        {
-            _gate.Release();
-        }
-
-        if (current)
-        {
-            await connection.DisposeAsync();
-        }
-    }
-
-    // While connected, the only thing the ssh-exit monitor can't see is the local adb server dying underneath a
-    // still-bound forward (the remote running `adb kill-server` reaches it through the tunnel). Probe it; fault on
-    // a sustained outage, but ride through a brief one (a deliberate `RestartAsync` bounces the server for ~1s).
-    private async Task MonitorServerHealthAsync(TunnelConnection connection, int port)
-    {
-        const int failuresBeforeFault = 2;
-        var failures = 0;
-        var token = connection.Cts.Token;
-
-        try
-        {
-            while (!token.IsCancellationRequested)
-            {
-                await Task.Delay(HealthCheckInterval, token);
-
-                if (await _adbServer.IsRunningAsync(port, token))
-                {
-                    failures = 0;
-                    continue;
-                }
-
-                if (++failures < failuresBeforeFault)
-                {
-                    continue;
-                }
-
-                await FaultIfCurrentAsync(
-                    connection,
-                    () => "The local adb server stopped — it may have been killed through the tunnel. Reconnect to restart it.",
-                    () => _logger.LogWarning("Local adb server is no longer listening on 127.0.0.1:{Port} — it may have been killed through the tunnel.", port));
-                return;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
-
-    private async Task MonitorSshExitAsync(TunnelConnection connection)
-    {
-        int exitCode;
-        try
-        {
-            exitCode = await connection.ExitTask;
-        }
-        catch
-        {
-            exitCode = -1;
-        }
-
-        await FaultIfCurrentAsync(
-            connection,
-            () => $"The tunnel dropped. {Detail(connection.Session.StandardError, exitCode)}",
-            () => _logger.LogWarning("Tunnel dropped (exit {ExitCode}): {Error}", exitCode, connection.Session.StandardError));
-    }
-
-    private void SetStatus(TunnelState state, string? message)
-    {
-        _status = new TunnelStatus(state, message);
-
-        if (state == TunnelState.Faulted)
-        {
-            _logger.LogWarning("Tunnel faulted: {Message}", message);
-        }
-        else
-        {
-            _logger.LogInformation("Tunnel {State}{Message}", state, message is null ? string.Empty : $": {message}");
-        }
-
-        StatusChanged?.Invoke(this, _status);
-    }
-
-    // Tears down the live connection, if any. Callers hold _gate (Connect/Disconnect/Dispose), so this is the one
-    // place a connection is retired from the owning side; a monitor retires its own via FaultIfCurrentAsync.
-    private async Task TearDownConnectionAsync()
-    {
-        var existing = _connection;
-        if (existing is null)
-        {
-            return;
-        }
-
-        _connection = null;
-        await existing.DisposeAsync();
     }
 
     // One live tunnel: the ssh session, the task that completes when it exits, and a CTS bounding the connected
