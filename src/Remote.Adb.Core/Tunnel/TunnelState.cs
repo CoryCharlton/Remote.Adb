@@ -12,6 +12,9 @@ public enum TunnelState
     /// <summary>The reverse tunnel is up and forwarding.</summary>
     Connected,
 
-    /// <summary>The tunnel could not be established, or dropped unexpectedly.</summary>
+    /// <summary>The tunnel dropped on its own and is being re-established automatically (with backoff).</summary>
+    Reconnecting,
+
+    /// <summary>The tunnel could not be established, or dropped and could not be re-established.</summary>
     Faulted,
 }

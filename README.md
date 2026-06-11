@@ -25,8 +25,9 @@ while it's there.
 
 1. **SSH reverse tunnel** — opens `ssh -N -R <remote>:127.0.0.1:<local> <host>` so the remote dev
    host's `adb` reaches your local `adb` server, with the kill-then-bind-then-retry handling the old
-   script learned the hard way. Detects when the local server dies underneath the tunnel and faults
-   instead of looking healthy. Can reconnect automatically on launch.
+   script learned the hard way. Detects when the tunnel drops or the local server dies underneath it
+   (instead of looking healthy) and **auto-reconnects with backoff**, only faulting if it can't recover.
+   Can also connect automatically on launch.
 2. **Emulator management** — list, start, stop, create, view/edit, and delete Android Virtual Devices.
 3. **Devices** — lists the devices `adb` currently sees (`adb devices -l`). Connecting to a device
    over the network (Wi-Fi) is still on the [roadmap](docs/ROADMAP.md).
