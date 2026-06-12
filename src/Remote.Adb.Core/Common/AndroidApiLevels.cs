@@ -24,6 +24,7 @@ public static class AndroidApiLevels
         [34] = "Upside Down Cake",
         [35] = "Vanilla Ice Cream",
         [36] = "Baklava",
+        [37] = "Cinnamon Bun",
     }.ToFrozenDictionary();
 
     // Marketing version per API level. Post-10 releases dropped public dessert names, so just the number.
@@ -45,6 +46,7 @@ public static class AndroidApiLevels
         [34] = "14",
         [35] = "15",
         [36] = "16",
+        [37] = "17",
     }.ToFrozenDictionary();
 
     /// <summary>The Android codename for an API level (e.g. 36 → "Baklava"), or <see langword="null"/> if none.</summary>

@@ -1,6 +1,6 @@
 using Remote.Adb.Desktop.Common;
 
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 /// <summary>
 /// The result of building the AVD field model: the grouped <see cref="DetailGroup"/>s for display, plus the

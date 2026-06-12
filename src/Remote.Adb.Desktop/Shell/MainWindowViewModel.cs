@@ -4,7 +4,6 @@ using Remote.Adb.Core.Diagnostics;
 using Remote.Adb.Desktop.Common;
 using Remote.Adb.Desktop.Common.Notifications;
 using Remote.Adb.Desktop.Devices;
-using Remote.Adb.Desktop.Emulators;
 using Remote.Adb.Desktop.Settings;
 using Remote.Adb.Desktop.Tunnel;
 
@@ -28,7 +27,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _windowActive = true;
 
     public MainWindowViewModel(
-        EmulatorViewModel emulator,
         DevicesViewModel devices,
         TunnelViewModel tunnel,
         SettingsViewModel settings,
@@ -40,7 +38,6 @@ public partial class MainWindowViewModel : ViewModelBase
 
         Destinations =
         [
-            new NavigationDestination("Emulators", "IconAndroidLogo", emulator),
             new NavigationDestination("Devices", "IconDeviceMobile", devices),
             new NavigationDestination("Tunnel", "IconPlugsConnected", tunnel),
             new NavigationDestination("Settings", "IconGear", settings),

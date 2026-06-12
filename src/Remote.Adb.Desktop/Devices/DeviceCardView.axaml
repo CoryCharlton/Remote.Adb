@@ -1,34 +1,107 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:dev="using:Remote.Adb.Desktop.Devices"
+             xmlns:conv="using:Remote.Adb.Desktop.Common.Converters"
              xmlns:theme="using:CCSWE.Avalonia.Material"
              x:Class="Remote.Adb.Desktop.Devices.DeviceCardView"
              x:DataType="dev:DeviceRowViewModel">
 
-    <!-- One device row. Read-only: a connection snapshot from `adb devices -l`. -->
-    <theme:Card Classes="Elevated">
-        <Grid ColumnDefinitions="Auto,*,Auto">
-            <PathIcon Grid.Column="0" Width="24" Height="24" Margin="0,0,12,0"
-                      VerticalAlignment="Center" Foreground="{DynamicResource OnSurfaceVariant}"
-                      Data="{StaticResource IconDeviceMobile}"/>
+    <UserControl.Resources>
+        <conv:DeviceTagToGeometryConverter x:Key="DeviceTagToGeometry"/>
+        <conv:DeviceFormToGeometryConverter x:Key="DeviceFormToGeometry"/>
+        <conv:DeviceConnectionToGeometryConverter x:Key="DeviceConnectionToGeometry"/>
+    </UserControl.Resources>
+
+    <!-- One device row. Virtual rows are clickable to open details and carry the start/stop/delete actions;
+         physical rows are inert (IsClickable=false, so no press affordance and no dimming) and show a
+         connection indicator instead. Page-level commands live on DevicesViewModel, reached via the
+         ItemsControl ancestor with this row passed as the parameter.
+
+         The action/overflow columns use SharedSizeGroup (the ItemsControl is the shared-size scope) so the
+         primary-action icon and the overflow slot line up across every card regardless of which slot each
+         row populates — a physical row's connection icon sits in the same column as an emulator's play/stop. -->
+    <theme:Card Classes="Elevated"
+                IsClickable="{Binding IsVirtual}"
+                Command="{Binding $parent[ItemsControl].((dev:DevicesViewModel)DataContext).ViewDetailsCommand}"
+                CommandParameter="{Binding}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DeviceAction"/>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="DeviceOverflow"/>
+            </Grid.ColumnDefinitions>
+
+            <Panel Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center">
+                <PathIcon Width="24" Height="24" VerticalAlignment="Center" Foreground="{DynamicResource OnSurfaceVariant}"
+                          IsVisible="{Binding IsVirtual}"
+                          Data="{Binding Tag, Converter={StaticResource DeviceTagToGeometry}}"/>
+                <PathIcon Width="24" Height="24" VerticalAlignment="Center" Foreground="{DynamicResource OnSurfaceVariant}"
+                          IsVisible="{Binding IsPhysical}"
+                          Data="{Binding Form, Converter={StaticResource DeviceFormToGeometry}}"/>
+            </Panel>
+
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                <TextBlock Text="{Binding DisplayName}" Classes="TitleMedium"
-                           Foreground="{DynamicResource OnSurface}"/>
+                <TextBlock Text="{Binding DisplayName}" Classes="TitleMedium" Foreground="{DynamicResource OnSurface}"/>
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="{Binding Serial}" Classes="BodySmall"
-                               Foreground="{DynamicResource OnSurfaceVariant}"/>
-                    <TextBlock Text="{Binding Summary}" Classes="BodySmall"
-                               Foreground="{DynamicResource OnSurfaceVariant}"
+                    <TextBlock Text="{Binding Summary}" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
                                IsVisible="{Binding Summary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding Serial}" Classes="BodySmall" Foreground="{DynamicResource OnSurfaceVariant}"
+                               IsVisible="{Binding Serial, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                 </StackPanel>
             </StackPanel>
 
-            <Panel Grid.Column="2" VerticalAlignment="Center">
-                <TextBlock Text="{Binding StateLabel}" Classes="BodySmall"
-                           Foreground="{DynamicResource Primary}" IsVisible="{Binding IsOnline}"/>
-                <TextBlock Text="{Binding StateLabel}" Classes="BodySmall"
-                           Foreground="{DynamicResource Error}" IsVisible="{Binding !IsOnline}"/>
+            <!-- Primary action column. Virtual: start / starting / stop share one slot (icon is both action and
+                 state). Physical: a connection indicator (USB/wireless), tinted by online state, state as tooltip.
+                 Centered so a bare connection glyph lines up with the padded start/stop icon buttons. -->
+            <Panel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Panel IsVisible="{Binding IsVirtual}" VerticalAlignment="Center">
+                    <Button Classes="Icon" IsVisible="{Binding ShowStart}" ToolTip.Tip="Start"
+                            Command="{Binding $parent[ItemsControl].((dev:DevicesViewModel)DataContext).StartCommand}"
+                            CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IconPlay}" Width="20" Height="20" Foreground="{DynamicResource Primary}"/>
+                    </Button>
+                    <ProgressBar Width="32" Height="4" IsIndeterminate="True"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 IsVisible="{Binding IsStarting}" ToolTip.Tip="Starting…"/>
+                    <Button Classes="Icon" IsVisible="{Binding ShowStop}" ToolTip.Tip="Stop"
+                            Command="{Binding $parent[ItemsControl].((dev:DevicesViewModel)DataContext).StopCommand}"
+                            CommandParameter="{Binding}">
+                        <PathIcon Data="{StaticResource IconStop}" Width="20" Height="20" Foreground="{DynamicResource Error}"/>
+                    </Button>
+                </Panel>
+
+                <Panel IsVisible="{Binding IsPhysical}" ToolTip.Tip="{Binding StateLabel}">
+                    <PathIcon Width="20" Height="20" IsVisible="{Binding IsOnline}"
+                              Data="{Binding Connection, Converter={StaticResource DeviceConnectionToGeometry}}"
+                              Foreground="{DynamicResource Primary}"/>
+                    <PathIcon Width="20" Height="20" IsVisible="{Binding !IsOnline}"
+                              Data="{Binding Connection, Converter={StaticResource DeviceConnectionToGeometry}}"
+                              Foreground="{DynamicResource OnSurfaceVariant}"/>
+                </Panel>
             </Panel>
+
+            <!-- Overflow column (virtual only). On physical rows the column is empty but still reserves the
+                 shared width, so the primary-action column stays aligned with the emulator rows.
+                 Flyout items can't reach the ItemsControl ancestor, so Delete binds to the DeleteCommand the
+                 row exposes (which the flyout inherits as its DataContext). -->
+            <Button Grid.Column="3" Classes="Icon" Margin="4,0,0,0" VerticalAlignment="Center"
+                    IsVisible="{Binding IsVirtual}" ToolTip.Tip="More actions">
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <MenuItem Header="Delete" Foreground="{DynamicResource Error}"
+                                  Command="{Binding DeleteCommand}" CommandParameter="{Binding}"
+                                  IsEnabled="{Binding !IsRunning}">
+                            <MenuItem.Icon>
+                                <PathIcon Data="{StaticResource IconTrash}" Width="16" Height="16"
+                                          Foreground="{DynamicResource Error}"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+                <PathIcon Data="{StaticResource IconDotsThreeVertical}" Width="20" Height="20"
+                          Foreground="{DynamicResource OnSurfaceVariant}"/>
+            </Button>
         </Grid>
     </theme:Card>
 

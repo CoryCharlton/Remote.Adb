@@ -3,15 +3,15 @@ using CommunityToolkit.Mvvm.Input;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
 
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 /// <summary>
 /// The details pane for one AVD: its full configuration grouped into collapsible sections that flip between
-/// read-only display and editable inputs. Created by <see cref="EmulatorViewModel"/>'s ViewDetails;
+/// read-only display and editable inputs. Created by <see cref="DevicesViewModel"/>'s ViewDetails;
 /// <see cref="BackCommand"/> returns to the list. Edit collects only the touched fields and persists them via
 /// <see cref="IAvdConfigStore"/>, clearing (omitting) any field left blank.
 /// </summary>
-public partial class EmulatorDetailsViewModel : ViewModelBase
+public partial class AvdDetailsViewModel : ViewModelBase
 {
     private readonly Action _back;
     private readonly IAvdConfigStore _store;
@@ -33,7 +33,7 @@ public partial class EmulatorDetailsViewModel : ViewModelBase
     [ObservableProperty]
     private string _subtitle = string.Empty;
 
-    public EmulatorDetailsViewModel(AvdConfiguration configuration, IAvdConfigStore store, Action back)
+    public AvdDetailsViewModel(AvdConfiguration configuration, IAvdConfigStore store, Action back)
     {
         _store = store;
         _back = back;

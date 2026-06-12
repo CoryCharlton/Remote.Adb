@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:emu="using:Remote.Adb.Desktop.Emulators"
+             xmlns:emu="using:Remote.Adb.Desktop.Devices"
              xmlns:core="using:Remote.Adb.Core.Emulators"
              xmlns:common="using:Remote.Adb.Desktop.Common"
-             x:Class="Remote.Adb.Desktop.Emulators.CreateAvdView"
+             x:Class="Remote.Adb.Desktop.Devices.CreateAvdView"
              x:DataType="emu:CreateAvdViewModel">
 
     <Panel>

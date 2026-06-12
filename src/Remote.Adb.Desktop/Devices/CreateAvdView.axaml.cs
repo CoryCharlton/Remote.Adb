@@ -5,7 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.VisualTree;
 
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 public partial class CreateAvdView : UserControl
 {

@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:dev="using:Remote.Adb.Desktop.Devices"
+             xmlns:common="using:Remote.Adb.Desktop.Common"
+             x:Class="Remote.Adb.Desktop.Devices.DevicesListView"
+             x:DataType="dev:DevicesViewModel">
+
+    <!-- A pinned action bar over the scrolling list. The * row bounds the ScrollViewer; the page inset lives on
+         the ItemsControl's Margin (never the ScrollViewer's Padding, which would leave the last cards unreachable). -->
+    <Panel>
+        <Grid RowDefinitions="Auto,*">
+
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*,Auto" Margin="24,12,24,0">
+                <Button Grid.Column="0" Classes="Text" Content="Add Virtual Device" Command="{Binding CreateCommand}"/>
+                <Button Grid.Column="1" Classes="Text" Content="Add Wireless Device" IsEnabled="False" ToolTip.Tip="Coming soon"/>
+                <Button Grid.Column="3" Classes="Text" Content="Refresh" Command="{Binding RefreshCommand}"/>
+            </Grid>
+
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding Devices}" Margin="24,12,24,24" Grid.IsSharedSizeScope="True">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="dev:DeviceRowViewModel">
+                            <dev:DeviceCardView/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <common:EmptyState IsVisible="{Binding IsListEmpty}"
+                           IconData="{StaticResource IconDeviceMobile}"
+                           Title="No devices yet"
+                           Description="Plug in a device, connect one over the network, or add a virtual device to get started."/>
+
+    </Panel>
+
+</UserControl>
