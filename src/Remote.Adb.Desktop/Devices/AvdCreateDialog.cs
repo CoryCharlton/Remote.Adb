@@ -1,6 +1,6 @@
 using Remote.Adb.Desktop.Common;
 
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 /// <inheritdoc />
 public sealed class AvdCreateDialog : IAvdCreateDialog

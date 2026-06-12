@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:emu="using:Remote.Adb.Desktop.Emulators"
+             xmlns:emu="using:Remote.Adb.Desktop.Devices"
              xmlns:common="using:Remote.Adb.Desktop.Common"
-             x:Class="Remote.Adb.Desktop.Emulators.EmulatorDetailsView"
-             x:DataType="emu:EmulatorDetailsViewModel">
+             x:Class="Remote.Adb.Desktop.Devices.AvdDetailsView"
+             x:DataType="emu:AvdDetailsViewModel">
 
     <!-- A force-filled Panel hosts a Grid(Auto,*): the header is pinned in the Auto row while only the body
          (the *-row ScrollViewer) scrolls. The * row bounds the ScrollViewer to the viewport, so the body

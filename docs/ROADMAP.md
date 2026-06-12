@@ -36,5 +36,5 @@ manual scripts and steps.
 - To debug the desktop UI (catch runtime layout/XAML bugs a clean build misses), drive it under WSLg
   with screenshots — see [wslg-gui-debugging.md](wslg-gui-debugging.md) and the reproducible data
   harness at [tools/setup-fake-avd-harness.sh](tools/setup-fake-avd-harness.sh).
-- Possible enhancement: expose the list auto-refresh interval (currently a 5s constant shared by the
-  Emulators and Devices pages) as a persisted setting.
+- Possible enhancement: expose the list auto-refresh interval (currently a 5s constant on the unified
+  Devices page) as a persisted setting.

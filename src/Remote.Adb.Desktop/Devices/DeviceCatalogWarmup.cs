@@ -3,7 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Remote.Adb.Core.Emulators;
 
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 /// <summary>
 /// Warms the device-profile cache at startup, so the first time the create wizard opens the slow,

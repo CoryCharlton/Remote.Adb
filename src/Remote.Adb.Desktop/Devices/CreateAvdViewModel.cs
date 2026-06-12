@@ -6,7 +6,7 @@ using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
 using Remote.Adb.Desktop.Common.Notifications;
 
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 /// <summary>
 /// The two-step "create AVD" wizard: pick a form factor + device + system image, tune the optional settings,

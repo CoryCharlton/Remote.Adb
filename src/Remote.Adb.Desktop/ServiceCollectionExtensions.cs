@@ -5,7 +5,6 @@ using Remote.Adb.Desktop.Common;
 using Remote.Adb.Desktop.Common.Notifications;
 using Remote.Adb.Desktop.Common.Threading;
 using Remote.Adb.Desktop.Devices;
-using Remote.Adb.Desktop.Emulators;
 using Remote.Adb.Desktop.Settings;
 using Remote.Adb.Desktop.Shell;
 using Remote.Adb.Desktop.Theming;
@@ -33,8 +32,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<INotificationService>(provider => provider.GetRequiredService<NotificationService>());
 
         // A fresh details VM per row, with its store resolved from DI and the configuration/back callback passed in.
-        services.AddSingleton<EmulatorDetailsViewModelFactory>(provider =>
-            (configuration, back) => new EmulatorDetailsViewModel(configuration, provider.GetRequiredService<IAvdConfigStore>(), back));
+        services.AddSingleton<AvdDetailsViewModelFactory>(provider =>
+            (configuration, back) => new AvdDetailsViewModel(configuration, provider.GetRequiredService<IAvdConfigStore>(), back));
 
         // A fresh wizard VM per dialog open (the dialog service is a singleton, so it cannot capture a transient).
         services.AddTransient<CreateAvdViewModel>();
@@ -45,13 +44,11 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<MainWindow>();
         services.AddTransient<MainWindowViewModel>();
-        services.AddTransient<EmulatorViewModel>();
         services.AddTransient<DevicesViewModel>();
         services.AddTransient<TunnelViewModel>();
         services.AddTransient<SettingsViewModel>();
 
-        // The four page views the ViewLocator resolves through DI; every other view is instantiated by XAML.
-        services.AddTransient<EmulatorView>();
+        // The three page views the ViewLocator resolves through DI; every other view is instantiated by XAML.
         services.AddTransient<DevicesView>();
         services.AddTransient<TunnelView>();
         services.AddTransient<SettingsView>();

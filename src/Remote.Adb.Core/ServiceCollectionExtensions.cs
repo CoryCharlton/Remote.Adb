@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAndroidSdk, AndroidSdk>();
         services.AddSingleton<IAvdCatalog, AvdCatalog>();
         services.AddSingleton<IAvdConfigStore, AvdConfigStore>();
+        services.AddSingleton<IDeviceDetailsResolver, DeviceDetailsResolver>();
         services.AddSingleton<IDeviceService, DeviceService>();
         services.AddSingleton<IAvdProvisioningService, AvdProvisioningService>();
         services.AddSingleton<IEmulatorService, EmulatorService>();

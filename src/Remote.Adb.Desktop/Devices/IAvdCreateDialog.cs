@@ -1,7 +1,7 @@
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 /// <summary>
-/// Shows the modal "create AVD" wizard, keeping <see cref="EmulatorViewModel"/> free of any window handling.
+/// Shows the modal "create AVD" wizard, keeping <see cref="DevicesViewModel"/> free of any window handling.
 /// </summary>
 public interface IAvdCreateDialog
 {

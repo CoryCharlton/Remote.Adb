@@ -2,7 +2,7 @@ using Remote.Adb.Core.Common;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common;
 
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 /// <summary>
 /// Builds the grouped <see cref="AvdField"/> model shared by the AVD details pane (view/edit) and the create

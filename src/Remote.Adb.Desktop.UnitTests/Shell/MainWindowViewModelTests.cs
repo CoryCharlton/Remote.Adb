@@ -10,7 +10,6 @@ using Remote.Adb.Desktop.Common;
 using Remote.Adb.Desktop.Common.Notifications;
 using Remote.Adb.Desktop.Common.Threading;
 using Remote.Adb.Desktop.Devices;
-using Remote.Adb.Desktop.Emulators;
 using Remote.Adb.Desktop.Settings;
 using Remote.Adb.Desktop.Shell;
 using Remote.Adb.Desktop.Theming;
@@ -22,6 +21,7 @@ namespace Remote.Adb.Desktop.UnitTests.Shell;
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public class MainWindowViewModelTests
 {
+    protected Mock<IDeviceService> DeviceService = null!;
     protected Mock<ISdkDiagnostics> Diagnostics = null!;
     protected Mock<IEmulatorService> EmulatorService = null!;
     protected Mock<INotificationService> Notifications = null!;
@@ -34,6 +34,11 @@ public class MainWindowViewModelTests
             .Setup(service => service.ListAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<AndroidVirtualDevice>());
 
+        DeviceService = new Mock<IDeviceService>();
+        DeviceService
+            .Setup(service => service.ListAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<AdbDevice>());
+
         Diagnostics = new Mock<ISdkDiagnostics>();
         Diagnostics.Setup(diagnostics => diagnostics.Evaluate()).Returns(Array.Empty<ToolDiagnostic>());
 
@@ -42,8 +47,9 @@ public class MainWindowViewModelTests
 
     protected MainWindowViewModel CreateViewModel()
     {
-        var emulator = new EmulatorViewModel(
+        var devices = new DevicesViewModel(
             EmulatorService.Object,
+            DeviceService.Object,
             Mock.Of<IAvdConfigStore>(),
             Mock.Of<IAvdCreateDialog>(),
             (_, _) => null!,
@@ -58,11 +64,6 @@ public class MainWindowViewModelTests
             Mock.Of<IThemeApplier>(),
             Mock.Of<IDensityApplier>());
 
-        var devices = new DevicesViewModel(
-            Mock.Of<IDeviceService>(),
-            Notifications.Object,
-            new FakeTimerFactory());
-
         var tunnel = new TunnelViewModel(
             Mock.Of<ITunnelService>(),
             Mock.Of<IAdbServerService>(),
@@ -71,7 +72,6 @@ public class MainWindowViewModelTests
             Notifications.Object);
 
         return new MainWindowViewModel(
-            emulator,
             devices,
             tunnel,
             settings,
@@ -80,7 +80,7 @@ public class MainWindowViewModelTests
     }
 
     protected void VerifyListCount(Times times) =>
-        EmulatorService.Verify(service => service.ListAsync(It.IsAny<CancellationToken>()), times);
+        DeviceService.Verify(service => service.ListAsync(It.IsAny<CancellationToken>()), times);
 
     public class When_RaiseStartupDiagnostics_Is_Called : MainWindowViewModelTests
     {
@@ -110,7 +110,7 @@ public class MainWindowViewModelTests
     public class When_The_Live_Screen_Changes : MainWindowViewModelTests
     {
         [Test]
-        public void It_activates_the_emulator_screen_on_construction()
+        public void It_activates_the_devices_screen_on_construction()
         {
             CreateViewModel();
 
@@ -118,7 +118,7 @@ public class MainWindowViewModelTests
         }
 
         [Test]
-        public void It_reactivates_the_emulator_when_window_focus_returns()
+        public void It_reactivates_the_devices_screen_when_window_focus_returns()
         {
             var viewModel = CreateViewModel();
 
@@ -146,7 +146,7 @@ public class MainWindowViewModelTests
             viewModel.SelectedDestination = viewModel.Destinations.First(destination => destination.Label == "Settings");
             VerifyListCount(Times.Once());
 
-            viewModel.SelectedDestination = viewModel.Destinations.First(destination => destination.Label == "Emulators");
+            viewModel.SelectedDestination = viewModel.Destinations.First(destination => destination.Label == "Devices");
             VerifyListCount(Times.Exactly(2));
         }
     }

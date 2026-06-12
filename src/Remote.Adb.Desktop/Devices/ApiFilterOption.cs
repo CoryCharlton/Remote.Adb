@@ -1,4 +1,4 @@
-namespace Remote.Adb.Desktop.Emulators;
+namespace Remote.Adb.Desktop.Devices;
 
 /// <summary>
 /// A selectable API-level filter in the create wizard. Carries the numeric <see cref="ApiLevel"/> (null = "all

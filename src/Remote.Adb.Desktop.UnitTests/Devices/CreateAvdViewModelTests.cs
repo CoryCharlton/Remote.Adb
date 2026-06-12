@@ -3,9 +3,9 @@ using System.Runtime.CompilerServices;
 using Moq;
 using Remote.Adb.Core.Emulators;
 using Remote.Adb.Desktop.Common.Notifications;
-using Remote.Adb.Desktop.Emulators;
+using Remote.Adb.Desktop.Devices;
 
-namespace Remote.Adb.Desktop.UnitTests.Emulators;
+namespace Remote.Adb.Desktop.UnitTests.Devices;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public class CreateAvdViewModelTests
