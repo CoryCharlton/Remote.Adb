@@ -13,8 +13,10 @@ public interface IEmulatorService
 
     /// <summary>
     /// Launches the emulator for the given AVD name. Does not wait for it to finish booting.
+    /// When <paramref name="coldBoot"/> is <see langword="true"/>, the saved snapshot is bypassed
+    /// (<c>-no-snapshot-load</c>) so the AVD boots fresh.
     /// </summary>
-    Task StartAsync(string avdName, CancellationToken cancellationToken = default);
+    Task StartAsync(string avdName, bool coldBoot = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Stops the running emulator with the given adb serial (e.g. <c>emulator-5554</c>).

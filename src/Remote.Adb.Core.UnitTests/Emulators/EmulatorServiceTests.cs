@@ -105,6 +105,20 @@ public class EmulatorServiceTests
     public class When_StartAsync_Is_Called
     {
         [Test]
+        public async Task It_appends_no_snapshot_load_when_cold_booting()
+        {
+            var processRunner = new Mock<IProcessRunner>();
+
+            var service = CreateService(processRunner);
+
+            await service.StartAsync("Pixel_6_API_34", coldBoot: true);
+
+            processRunner.Verify(
+                r => r.Start(EmulatorPath, It.Is<IReadOnlyList<string>>(arguments => arguments.SequenceEqual(new[] { "-avd", "Pixel_6_API_34", "-no-snapshot-load" }))),
+                Times.Once);
+        }
+
+        [Test]
         public async Task It_launches_the_emulator_with_the_avd_name()
         {
             var processRunner = new Mock<IProcessRunner>();

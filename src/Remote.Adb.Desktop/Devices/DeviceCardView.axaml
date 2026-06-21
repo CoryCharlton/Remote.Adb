@@ -89,6 +89,15 @@
                     IsVisible="{Binding IsVirtual}" ToolTip.Tip="More actions">
                 <Button.Flyout>
                     <MenuFlyout>
+                        <MenuItem Header="Cold boot"
+                                  Command="{Binding ColdBootCommand}" CommandParameter="{Binding}"
+                                  IsEnabled="{Binding ShowStart}">
+                            <MenuItem.Icon>
+                                <PathIcon Data="{StaticResource IconSnowflake}" Width="16" Height="16"
+                                          Foreground="{DynamicResource OnSurfaceVariant}"/>
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <Separator/>
                         <MenuItem Header="Delete" Foreground="{DynamicResource Error}"
                                   Command="{Binding DeleteCommand}" CommandParameter="{Binding}"
                                   IsEnabled="{Binding !IsRunning}">
