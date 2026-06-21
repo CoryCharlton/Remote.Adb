@@ -82,10 +82,11 @@ public sealed class EmulatorService : IEmulatorService
     }
 
     /// <inheritdoc />
-    public Task StartAsync(string avdName, CancellationToken cancellationToken = default)
+    public Task StartAsync(string avdName, bool coldBoot = false, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Starting emulator {AvdName}", avdName);
-        _processRunner.Start(_androidSdk.EmulatorPath, ["-avd", avdName]);
+        _logger.LogInformation("Starting emulator {AvdName} (coldBoot: {ColdBoot})", avdName, coldBoot);
+        string[] arguments = coldBoot ? ["-avd", avdName, "-no-snapshot-load"] : ["-avd", avdName];
+        _processRunner.Start(_androidSdk.EmulatorPath, arguments);
         return Task.CompletedTask;
     }
 

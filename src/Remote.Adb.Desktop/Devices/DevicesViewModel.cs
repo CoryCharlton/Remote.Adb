@@ -152,7 +152,7 @@ public partial class DevicesViewModel : AutoRefreshingListViewModel
             device => "avd:" + device.Name,
             row => row.IdentityKey,
             row => row.IsVirtual,
-            device => new DeviceRowViewModel(device, DeleteCommand),
+            device => new DeviceRowViewModel(device, DeleteCommand, ColdBootCommand),
             (row, device) => row.Update(device));
 
     // Transient failures surface as an auto-dismissing error toast (not a persistent inline label).
@@ -160,7 +160,11 @@ public partial class DevicesViewModel : AutoRefreshingListViewModel
         Notifications.Show(title, message, NotificationSeverity.Error);
 
     [RelayCommand]
-    private async Task StartAsync(DeviceRowViewModel? device)
+    private Task ColdBootAsync(DeviceRowViewModel? device) => LaunchAsync(device, coldBoot: true);
+
+    // Shared launch flow for the normal start and cold-boot commands: guard, flip the row into the transient
+    // "starting" state, kick off the emulator, then poll until adb reports it running.
+    private async Task LaunchAsync(DeviceRowViewModel? device, bool coldBoot)
     {
         if (device is null || !device.IsVirtual || device.IsRunning || device.IsStarting)
         {
@@ -171,7 +175,7 @@ public partial class DevicesViewModel : AutoRefreshingListViewModel
 
         try
         {
-            await _emulatorService.StartAsync(device.Name);
+            await _emulatorService.StartAsync(device.Name, coldBoot);
             await WaitUntilRunningAsync(device);
         }
         catch (ProcessLaunchException exception)
@@ -183,6 +187,9 @@ public partial class DevicesViewModel : AutoRefreshingListViewModel
             device.IsStarting = false;
         }
     }
+
+    [RelayCommand]
+    private Task StartAsync(DeviceRowViewModel? device) => LaunchAsync(device, coldBoot: false);
 
     [RelayCommand]
     private async Task StopAsync(DeviceRowViewModel? device)
