@@ -55,7 +55,7 @@ dotnet test src/Remote.Adb.slnx
 dotnet test src/Remote.Adb.slnx --filter "FullyQualifiedName~ClassName"
 ```
 
-The SDK is pinned to `10.0.0` (`rollForward: latestMinor`) via `src/global.json`. `src/Directory.Build.props` applies `LangVersion=default`, `ImplicitUsings=enable`, and `Nullable=enable` solution-wide, and references JetBrains.Annotations and Nerdbank.GitVersioning (version derived from git history).
+The SDK is pinned to `10.0.0` (`rollForward: latestMinor`) via `global.json` at the repo root. `src/Directory.Build.props` applies `LangVersion=default`, `ImplicitUsings=enable`, and `Nullable=enable` solution-wide, and references JetBrains.Annotations and Nerdbank.GitVersioning (version derived from git history).
 
 ## Package management
 
