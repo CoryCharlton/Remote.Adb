@@ -18,7 +18,7 @@ live as long as the app, and disposal-on-close would fire at shutdown. Don't bui
   `CreateScopedWindow<TWindow>(this IServiceProvider)` that resolves a window (and its VM graph) from a child
   `IServiceScope` and disposes the scope on `Closed`. Window granularity is the common case; the same primitive
   applies to a page `UserControl` for per-visit scoping later.
-- **Scope the page VMs** (Emulator / Devices / Tunnel / Settings) and `MainWindowViewModel` to the shell window's
+- **Scope the page VMs** (Devices / Tunnel / Settings) and `MainWindowViewModel` to the shell window's
   scope (`AddScoped`), resolved via `CreateScopedWindow<MainWindow>()` in `App`, so they dispose with the window.
 - **DI-resolve dialog windows**: drop `DialogHost.ShowAsync<TWindow>`'s `where TWindow : Window, new()` constraint
   and resolve `ConfirmDialogWindow` / `CreateAvdWizardWindow` from DI (a child scope), consistent with the page
@@ -26,8 +26,8 @@ live as long as the app, and disposal-on-close would fire at shutdown. Don't bui
 
 ## Already done (in-app, no library)
 
-- `CreateAvdViewModel` and `EmulatorDetailsViewModel` are created via registered factories (`Func<CreateAvdViewModel>`,
-  `EmulatorDetailsViewModelFactory`) instead of hand-`new`ed with forwarded services.
+- `CreateAvdViewModel` and `AvdDetailsViewModel` are created via registered factories (`Func<CreateAvdViewModel>`,
+  `AvdDetailsViewModelFactory`) instead of hand-`new`ed with forwarded services.
 - `MainWindowViewModel` no longer fires the startup diagnostics as a constructor side effect — the shell calls
   `RaiseStartupDiagnostics()` from `MainWindow.OnLoaded` once its notification sink is attached.
 
@@ -36,4 +36,4 @@ live as long as the app, and disposal-on-close would fire at shutdown. Don't bui
 - Microsoft.Extensions.DependencyInjection has no built-in `Func<T>` — register factory delegates explicitly
   (`AddTransient<Func<T>>(sp => () => sp.GetRequiredService<T>())`) or inject `IServiceProvider` /
   `IServiceScopeFactory` for per-instance creation.
-- `EmulatorDeviceViewModel` and `ConfirmDialogViewModel` take only per-call runtime args — keep manual `new`.
+- `DeviceRowViewModel` and `ConfirmDialogViewModel` take only per-call runtime args — keep manual `new`.

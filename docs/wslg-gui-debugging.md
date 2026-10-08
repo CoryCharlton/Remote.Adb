@@ -38,9 +38,9 @@ bash docs/tools/setup-fake-avd-harness.sh          # → /tmp/fakesdk, /tmp/avdh
 ```
 
 This builds a **structured fake SDK root** (`$SDK/emulator`, `platform-tools`,
-`cmdline-tools/latest/bin/{avdmanager,sdkmanager}`, `system-images/…`) plus 15 AVDs under `$AVDS`: one
+`cmdline-tools/latest/bin/{avdmanager,sdkmanager}`, `system-images/…`) plus AVDs under `$AVDS`: one
 **rich** `Television_1080p_16.0` (every detail group populated, with a sibling `.ini` for the Location group)
-and 14 **minimal** `Pixel_*`. The fake `emulator -list-avds` reflects whatever is in `$AVDS`, and the fake
+and a set of **minimal** `Pixel_*`. The fake `emulator -list-avds` reflects whatever is in `$AVDS`, and the fake
 `avdmanager` actually creates/deletes `.avd` folders — so the **create** wizard and console verbs work too.
 
 Why these env vars (see `AndroidSdk.cs` / `AvdHome.cs`):
@@ -103,9 +103,10 @@ xdotool windowactivate "$wid"; sleep 0.5
 
 ## 5. Click and scroll
 
-The window is 900×560. The drawer occupies the left ~360px; content is on the right.
+Window size is set in `Shell/MainWindow.axaml` and drawer width in `MainWindowViewModel.DrawerLength`; content is
+right of the drawer. The coordinates below are examples — locate targets from a screenshot first.
 
-- **Click a card body** (avoid the play button at the far right): `xdotool mousemove 550 63; xdotool click 1`
+- **Click a card body** (avoid the action buttons at the far right): `xdotool mousemove 550 63; xdotool click 1`
 - **Scroll** — the pointer must be **physically warped** over the scrollable area first; targeting by
   `--window` is not enough for wheel events. Button 5 = wheel down, button 4 = wheel up:
 
@@ -148,7 +149,7 @@ timeout 30 xdotool search --sync --name "Remote ADB" >/dev/null 2>&1
 wid=""; for w in $(xdotool search --name "Remote ADB"); do
   [ "$(xdotool getwindowname "$w")" = "Remote ADB" ] && wid=$w && break; done
 xdotool windowactivate "$wid"; sleep 0.5
-xdotool mousemove 550 63; xdotool click 1; sleep 1     # open the rich Television AVD
+xdotool mousemove 550 63; xdotool click 1; sleep 1     # open the first AVD card
 xdotool mousemove 630 300; xdotool click --repeat 250 --delay 5 5   # scroll details to bottom
 import -window "$wid" /tmp/details-bottom.png           # → read with Read tool
 

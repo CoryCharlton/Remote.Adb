@@ -40,10 +40,10 @@ while it's there.
 Run Remote.Adb on the machine that has your Android devices and emulators and the `adb` server —
 typically your **local workstation** (Windows in my setup, though the app is cross-platform):
 
-- **[.NET 10 runtime](https://dotnet.microsoft.com/download)** to run it (the **SDK** if you're building from source).
+- The **[.NET runtime](https://dotnet.microsoft.com/download)** for the target framework in [`src/Directory.Build.props`](src/Directory.Build.props) to run it (the **SDK** if you're building from source).
 - The **Android SDK** — `adb` and `emulator` are found via `ANDROID_HOME`/`ANDROID_SDK_ROOT`, the
   platform default (e.g. `%LOCALAPPDATA%\Android\Sdk`), or an override you set in the app. Emulator
-  creation also uses the `cmdline-tools` (`avdmanager`/`sdkmanager`).
+  creation also uses `avdmanager` from the `cmdline-tools`, which needs a JDK (`JAVA_HOME` or the app's JDK setting).
 - An **OpenSSH client** (`ssh`) on your `PATH` (the built-in Windows OpenSSH is fine).
 - **Key-based SSH access to the remote host that works non-interactively.** The tunnel runs `ssh`
   in `BatchMode` — it will not answer a password or passphrase prompt — so load your key into an
@@ -55,7 +55,7 @@ typically your **local workstation** (Windows in my setup, though the app is cro
 ## Install & run
 
 Download the latest build for your platform — each archive contains both the desktop app and the console. The
-builds are framework-dependent, so you'll need the [.NET 10 runtime](https://dotnet.microsoft.com/download) installed:
+builds are framework-dependent, so you'll need the [.NET runtime](https://dotnet.microsoft.com/download) installed:
 
 - **Windows (x64):** [`Remote.Adb-win-x64.zip`](https://github.com/CoryCharlton/Remote.Adb/releases/latest/download/Remote.Adb-win-x64.zip)
 - **Linux (x64):** [`Remote.Adb-linux-x64.tar.gz`](https://github.com/CoryCharlton/Remote.Adb/releases/latest/download/Remote.Adb-linux-x64.tar.gz)
@@ -79,14 +79,13 @@ dotnet run --project src/Remote.Adb.Console -- tunnel
 
 ### Desktop
 
-- **Tunnel** — enter the remote host (and, if needed, the remote/local ports — both default to
-  `5037`), then **Connect**. Toggle *Connect automatically at launch* to have the tunnel come up
-  with the app. The status card shows the live state (and the real `ssh` error if it can't connect),
+- **Tunnel** — enter the remote host (and, if needed, the remote/local ports), then **Connect**. Toggle
+  *Connect automatically at launch* to have the tunnel come up with the app. The status card shows the live state (and the real `ssh` error if it can't connect),
   and a **Restart adb** action bounces the local `adb` server without dropping the tunnel.
-- **Emulators** — your AVDs with their running state; start/stop/create/edit/delete from here.
-- **Devices** — what `adb` currently sees, auto-refreshed while the page is open.
+- **Devices** — your AVDs with their running state (start/stop/create/edit/delete) and the physical devices `adb`
+  currently sees, in one list auto-refreshed while the page is open.
 
-App settings (the remote host and ports, SDK/JDK overrides, theme) are persisted under your
+App settings (the remote host and ports, SDK/JDK/AVD-home overrides, theme/density) are persisted under your
 app-data folder.
 
 ### Console
@@ -110,8 +109,8 @@ Contributions and local hacking start here.
 
 ### Tech stack
 
-- **.NET 10** / C# (`net10.0`), SDK pinned to `10.0.0` via `global.json` (`rollForward: latestMinor`)
-- **[Avalonia 12](https://avaloniaui.net/)** for the cross-platform desktop UI
+- **.NET** / C# — target framework in `src/Directory.Build.props`, SDK pinned via `global.json`
+- **[Avalonia](https://avaloniaui.net/)** for the cross-platform desktop UI
 - **MVVM** via [CommunityToolkit.Mvvm](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/) (`[ObservableProperty]`, `[RelayCommand]` source generators)
 - **[.NET Generic Host](https://learn.microsoft.com/dotnet/core/extensions/generic-host)** — the desktop head boots through **CCSWE.Avalonia.Hosting**, which wraps Avalonia's `AppBuilder` in the host so DI, configuration, and lifetime are wired the standard way
 - **CCSWE.Avalonia.ViewLocator** — a source generator builds the view-model → view map at compile time (no reflection); **CCSWE.Avalonia.Material** supplies the Material 3 theme, type scale, and controls
@@ -127,7 +126,7 @@ The solution is `src/Remote.Adb.slnx`:
 - **`Remote.Adb.Core`** — class library with all domain logic (models, services, DI registration). Both front-ends depend on it; no UI dependency.
 - **`Remote.Adb.Desktop`** — the Avalonia desktop GUI (`WinExe`).
 - **`Remote.Adb.Console`** — the command-line front-end.
-- **`Remote.Adb.Core.UnitTests`** / **`Remote.Adb.Desktop.UnitTests`** — NUnit 4 tests (plain NUnit + Moq; UI types sit behind seams so no Avalonia.Headless is needed).
+- **`Remote.Adb.Core.UnitTests`** / **`Remote.Adb.Desktop.UnitTests`** — NUnit tests (plain NUnit + Moq; UI types sit behind seams so no Avalonia.Headless is needed).
 
 ```bash
 dotnet test src/Remote.Adb.slnx
@@ -136,14 +135,14 @@ dotnet test src/Remote.Adb.slnx
 ### Architecture
 
 All functionality lives in **`Remote.Adb.Core`**; the desktop GUI and console are thin front-ends that
-compose a DI service provider (`AddRemoteAdbCore()`) and drive the same services. Both projects are
-organized **feature-first** (`Adb/`, `Emulators/`, `Devices/`, `Tunnel/`, `Settings/`), with `Common/`
-for cross-feature plumbing.
+compose a DI service provider (`AddRemoteAdbCore()`) and drive the same services. Core and Desktop are
+organized **feature-first** (Core: `Adb/`, `Diagnostics/`, `Emulators/`, `Settings/`, `Tunnel/`; Desktop: `Devices/`,
+`Settings/`, `Shell/`, `Theming/`, `Tunnel/`), with `Common/` for cross-feature plumbing.
 
 The desktop app follows Avalonia's MVVM conventions:
 
 - `Program.Main` builds a `DesktopApplication` host (`DesktopApplication.CreateBuilder<App>`), registers services, and runs it — the host owns DI and the classic desktop lifetime. `BuildAvaloniaApp()` mirrors the same configuration (minus the host) for the XAML previewer; developer tools are added only in `DEBUG`.
-- `App.OnFrameworkInitializationCompleted` is the composition root — the host injects the service provider, then the app applies the persisted theme/density and resolves the main view model from DI.
+- `App.OnFrameworkInitializationCompleted` is the composition root — the host injects the service provider, then the app applies the persisted theme/density and resolves the main window from DI.
 - **View resolution is convention-based** via a source-generated `ViewLocator`: a `[GenerateViewLocator(typeof(ViewModelBase))]` partial class is filled in at compile time, mapping each `FooViewModel` to the `FooView` in the **same namespace** (matching the feature-first layout) and resolving the view from DI. View models must derive from `ViewModelBase`.
 - **Compiled bindings are on by default** — XAML bindings need a declared `x:DataType`, and binding errors surface at compile time.
 - View models and services stay UI-free: anything that would touch an Avalonia control or threading primitive goes behind a `Common/` abstraction with a UI-side adapter (e.g. `ITimerFactory`, `INotificationSink`, `IUiDispatcher`), keeping them unit-testable with plain NUnit + Moq.
@@ -154,8 +153,8 @@ To add a screen: in the relevant feature folder of `Remote.Adb.Desktop`, create 
 
 The reverse-tunnel workflow has a few non-obvious requirements the implementation bakes in:
 
-- The reverse tunnel is `ssh -o ExitOnForwardFailure=yes -N -R 5037:127.0.0.1:5037 <host>`. `ExitOnForwardFailure` turns a silent bind failure into a visible non-zero exit.
-- Kill the remote `adb` with `pkill -x adb`, **not** `adb kill-server` — `kill-server` does a localhost network round-trip that can hang on a stale/forwarded `127.0.0.1:5037`.
+- The reverse tunnel is `ssh -o ExitOnForwardFailure=yes -N -R <remote>:127.0.0.1:<local> <host>`. `ExitOnForwardFailure` turns a silent bind failure into a visible non-zero exit.
+- Kill the remote `adb` with `pkill -x adb`, **not** `adb kill-server` — `kill-server` does a localhost network round-trip that can hang on a stale/forwarded `127.0.0.1` port.
 - Use the literal `127.0.0.1` (not `localhost`) for the forward target — Windows OpenSSH may resolve `localhost` to IPv6 `::1`, but the Windows `adb` server binds only IPv4, causing refused connections.
 - A remote IntelliJ Android plugin respawns `adb` on Gradle sync and races the bind — hence the kill-then-bind-then-retry loop.
 
