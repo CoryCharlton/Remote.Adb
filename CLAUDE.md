@@ -25,7 +25,7 @@ When a milestone lands, **delete its task doc and remove its ROADMAP row** — d
 
 The reverse-tunnel workflow encodes hard-won knowledge the `TunnelService` implementation preserves:
 
-- The reverse tunnel is `ssh -o ExitOnForwardFailure=yes -N -R 5037:127.0.0.1:5037 <host>`. `ExitOnForwardFailure` turns a silent bind failure into a visible non-zero exit.
+- The reverse tunnel is `ssh -o ExitOnForwardFailure=yes -N -R <remote>:127.0.0.1:<local> <host>` (ports from `TunnelRemotePort`/`TunnelLocalPort` in `SettingsModel`). `ExitOnForwardFailure` turns a silent bind failure into a visible non-zero exit.
 - Kill the remote `adb` with `pkill -x adb`, **not** `adb kill-server` — `kill-server` does a localhost network round-trip that can hang on a stale/forwarded `127.0.0.1:5037`.
 - Use the literal `127.0.0.1` (not `localhost`) for the forward target — Windows OpenSSH may resolve `localhost` to IPv6 `::1`, but the Windows `adb` server binds only IPv4, causing refused connections.
 - A remote IntelliJ Android plugin respawns `adb` on Gradle sync and races the bind — hence the kill-then-bind-then-retry loop.

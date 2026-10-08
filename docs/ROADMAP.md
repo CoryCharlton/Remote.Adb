@@ -12,7 +12,7 @@ manual scripts and steps.
 ## Pillars
 
 1. **SSH port forwarding** — open a reverse tunnel so a local `adb` server is reachable from the
-   remote dev host (`ssh -o ExitOnForwardFailure=yes -N -R 5037:127.0.0.1:5037 <host>`), with
+   remote dev host (`ssh -o ExitOnForwardFailure=yes -N -R <remote>:127.0.0.1:<local> <host>`), with
    kill-then-bind-then-retry handling for the IntelliJ adb-respawn race.
 2. **Emulator management** — list, start, stop, create, view/edit, and delete Android emulators.
 3. **Remote device connection** — connect to Android devices over the network (e.g. Wi-Fi).
@@ -36,5 +36,5 @@ manual scripts and steps.
 - To debug the desktop UI (catch runtime layout/XAML bugs a clean build misses), drive it under WSLg
   with screenshots — see [wslg-gui-debugging.md](wslg-gui-debugging.md) and the reproducible data
   harness at [tools/setup-fake-avd-harness.sh](tools/setup-fake-avd-harness.sh).
-- Possible enhancement: expose the list auto-refresh interval (currently a 5s constant on the unified
-  Devices page) as a persisted setting.
+- Possible enhancement: expose the list auto-refresh interval (currently the `DevicesViewModel.RefreshInterval`
+  constant) as a persisted setting.
