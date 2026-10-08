@@ -10,7 +10,7 @@ A cross-platform desktop app to manage ADB (Android Debug Bridge) connections to
 2. **Emulator management** — start, manage, and create Android emulators.
 3. **Remote device connection** — connect to Android devices over the network (e.g. Wi-Fi).
 
-The app is .NET 10 / C# targeting `net10.0`. All functionality lives in a shared **`Remote.Adb.Core`** library exposed through two front-ends: a desktop GUI (**`Remote.Adb.Desktop`**, **Avalonia 12** + **MVVM** via CommunityToolkit.Mvvm) and a CLI (**`Remote.Adb.Console`**). It is early-stage; emulator management landed first.
+The app is C#; the target framework is set in `src/Directory.Build.props`. All functionality lives in a shared **`Remote.Adb.Core`** library exposed through two front-ends: a desktop GUI (**`Remote.Adb.Desktop`**, **Avalonia** + **MVVM** via CommunityToolkit.Mvvm) and a CLI (**`Remote.Adb.Console`**). It is early-stage; emulator management landed first.
 
 ## Roadmap & tasks
 
@@ -55,7 +55,7 @@ dotnet test src/Remote.Adb.slnx
 dotnet test src/Remote.Adb.slnx --filter "FullyQualifiedName~ClassName"
 ```
 
-The SDK is pinned to `10.0.0` (`rollForward: latestMinor`) via `global.json` at the repo root. `src/Directory.Build.props` applies `LangVersion=default`, `ImplicitUsings=enable`, and `Nullable=enable` solution-wide, and references JetBrains.Annotations and Nerdbank.GitVersioning (version derived from git history).
+The SDK is pinned via the root `global.json`. `src/Directory.Build.props` applies `LangVersion=default`, `ImplicitUsings=enable`, and `Nullable=enable` solution-wide, and references JetBrains.Annotations and Nerdbank.GitVersioning (version derived from git history).
 
 ## Package management
 
@@ -65,17 +65,17 @@ Package versions are centrally managed via **Central Package Management** (`src/
 
 Projects in `src/Remote.Adb.slnx`:
 
-- **`Remote.Adb.Core`** — class library holding all domain logic: models, services (process execution, Android SDK location, emulator management, later SSH/devices), and the `AddRemoteAdbCore()` DI registration extension. Both front-ends depend on it; it has no UI dependency.
+- **`Remote.Adb.Core`** — class library holding all domain logic: models, services (process execution, Android SDK location, emulator management, adb devices, SSH tunnel), and the `AddRemoteAdbCore()` DI registration extension. Both front-ends depend on it; it has no UI dependency.
 - **`Remote.Adb.Desktop`** — the Avalonia desktop GUI (`WinExe`), MVVM.
 - **`Remote.Adb.Console`** — the CLI front-end exposing the same Core functionality.
-- **`Remote.Adb.Core.UnitTests`** — NUnit 4 tests for Core.
+- **`Remote.Adb.Core.UnitTests`** / **`Remote.Adb.Desktop.UnitTests`** — NUnit tests for Core / Desktop.
 
 Both front-ends compose a `Microsoft.Extensions.DependencyInjection` service provider and call `AddRemoteAdbCore()` to register the shared services. Keep logic in Core; the GUI and CLI are thin shells over it.
 
 The desktop app follows Avalonia's **MVVM** conventions:
 
 - `Program.Main` builds a **.NET Generic Host** via `DesktopApplication.CreateBuilder<App>` (from the **CCSWE.Avalonia.Hosting** package), registers services, and runs it — the host owns DI and the classic desktop lifetime. `BuildAvaloniaApp()` mirrors the same Avalonia configuration (minus the host) for the XAML previewer; `WithDeveloperTools()` is added only in `DEBUG`. Fonts/type scale come from the CCSWE.Avalonia.Material theme, not a base theme.
-- `App.OnFrameworkInitializationCompleted` is the composition root — the host injects the service provider (`IServiceProviderAccessor`), then the app applies the persisted theme/density and resolves the main view model from DI.
+- `App.OnFrameworkInitializationCompleted` is the composition root — the host injects the service provider (`IServiceProviderAccessor`), then the app applies the persisted theme/density, registers the DI-backed `ViewLocator`, and resolves `MainWindow` from DI.
 - **View resolution is source-generated** via the **CCSWE.Avalonia.ViewLocator** package: `ViewLocator` is an empty `[GenerateViewLocator(typeof(ViewModelBase))]` partial that the generator fills in at compile time, mapping each `FooViewModel` to the `FooView` in the **same namespace** (e.g. `DevicesViewModel` → `DevicesView` — so a VM and its view live together in one feature folder) and resolving the view from DI. View models must derive from `ViewModelBase` for the locator to match.
 - `ViewModelBase` derives from CommunityToolkit.Mvvm's `ObservableObject`. Use the toolkit's source generators (`[ObservableProperty]`, `[RelayCommand]`) for bindable state and commands.
 - **Compiled bindings are on by default** (`AvaloniaUseCompiledBindingsByDefault=true`) — XAML bindings need a declared `x:DataType`, and binding errors surface at compile time.
@@ -86,7 +86,7 @@ A view model or service must **not** depend directly on an Avalonia UI control o
 
 ### Project organization — feature-first vertical slices
 
-Both `Remote.Adb.Desktop` and `Remote.Adb.Core` are organized **feature-first**: a feature's views, view models, and services live together in a feature folder (`Emulators/`, `Devices/`, `Tunnel/`, `Settings/`), with `Common/` for genuinely cross-feature pieces (base classes, process/SDK plumbing, reusable controls, converters) and Desktop's `Shell/` for the app frame + navigation. Namespaces follow folders; a piece used by exactly one feature lives *in* that feature, not in `Common/`.
+Both `Remote.Adb.Desktop` and `Remote.Adb.Core` are organized **feature-first**: a feature's views, view models, and services live together in a feature folder (e.g. `Adb/`, `Emulators/`, `Devices/`, `Tunnel/`, `Settings/`), with `Common/` for genuinely cross-feature pieces (base classes, process/SDK plumbing, reusable controls, converters) and Desktop's `Shell/` for the app frame + navigation. Namespaces follow folders; a piece used by exactly one feature lives *in* that feature, not in `Common/`.
 
 **Decompose views into small, single-purpose `UserControl`s.** A page is a thin shell that composes smaller pieces (a list view, a row card, a reusable overlay, a detail pane) — never one giant XAML file. Extract a piece even if it isn't reused yet.
 
@@ -103,7 +103,7 @@ Pattern: a full-bleed scroll container (no margin/padding) → scrolled content 
 
 # Testing
 
-Tests use **NUnit 4**. (No test project exists yet; follow these conventions when adding one.)
+Tests use **NUnit**.
 
 ## Class organization
 
@@ -203,4 +203,4 @@ This is the parse side only. The byte→string boundary itself (`StreamReader.Re
 
 ## XML documentation
 
-In library projects that enable `GenerateDocumentationFile` (e.g. `Remote.Adb.Core`), document public/internal types and members; use `<inheritdoc />` for interface implementations where the interface doc suffices. Elsewhere, add docs only where they clarify intent.
+In library projects that enable `GenerateDocumentationFile`, document public/internal types and members; use `<inheritdoc />` for interface implementations where the interface doc suffices. Elsewhere, add docs only where they clarify intent.
